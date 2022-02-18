@@ -1,5 +1,6 @@
 tasks:
   - init: |
+      cp .cobra.yaml ~
       go get github.com/spf13/cobra/cobra
       go build
     command: |
