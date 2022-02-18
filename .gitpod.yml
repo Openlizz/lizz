@@ -1,0 +1,9 @@
+tasks:
+  - init: |
+      go get github.com/spf13/cobra/cobra
+      go build
+    command: |
+      ./lizz --help
+vscode:
+  extensions:
+    - golang.go
