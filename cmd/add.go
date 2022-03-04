@@ -90,6 +90,7 @@ func init() {
 func addCmdRun(cmd *cobra.Command, args []string) error {
 
 	// clone application repository
+	logger.Actionf("clone application repository")
 	gitClient, tmpDir, err := cloneRepositoryTemp(addArgs.originUrl, addArgs.originBranch, addArgs.username, addArgs.password, rootArgs.timeout)
 	if err != nil {
 		return err
@@ -100,12 +101,14 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	// clone cluster repository
+	logger.Actionf("clone cluster repository")
 	gitClientFleet, tmpDirFleet, err := cloneRepositoryTemp(addArgs.fleetUrl, addArgs.fleetBranch, addArgs.username, addArgs.password, rootArgs.timeout)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpDirFleet)
 	// read application config file
+	logger.Actionf("read application config file")
 	_, err = os.Stat(filepath.Join(tmpDir, "config.yaml"))
 	if err != nil {
 		return fmt.Errorf("the application does not have a config.yaml file: %w", err)
@@ -115,13 +118,17 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	// extract values to rendered from application config file
+	logger.Actionf("extract values to rendered from application config file")
 	valuesString := extractValuesFromString(string(applicationConfigData))
 	values := &Values{}
-	err = yaml.Unmarshal([]byte(valuesString), &values)
-	if err != nil {
-		return err
+	if valuesString != "" {
+		err = yaml.Unmarshal([]byte(valuesString), &values)
+		if err != nil {
+			return err
+		}
 	}
 	// read the cluster config file
+	logger.Actionf("read the cluster config file")
 	_, err = os.Stat(filepath.Join(tmpDirFleet, "config.yaml"))
 	if err != nil {
 		return fmt.Errorf("the cluster does not have a config.yaml file: %w", err)
@@ -131,73 +138,69 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	// create ClusterConfig struct
+	logger.Actionf("create ClusterConfig struct")
 	clusterConfig := &ClusterConfig{}
 	err = yaml.Unmarshal([]byte(clusterConfigData), &clusterConfig)
 	if err != nil {
 		return err
 	}
+	// initialize template values
+	templateValues := make(map[string]interface{})
 	// render application dependencies
-	fmt.Printf("Application dependencies: %+v\n", values.ApplicationDependencies)
-	fmt.Printf("Cluster applications: %+v\n", clusterConfig.Applications)
-	for _, applicationDependency := range values.ApplicationDependencies {
+	logger.Actionf("render application dependencies")
+	for idx, applicationDependency := range values.ApplicationDependencies {
+		templateValues[applicationDependency.Name] = false
 		for _, application := range clusterConfig.Applications {
 			if application.Configuration.Repository == applicationDependency.Repository {
-				fmt.Println("MATCHHHHHH")
-				applicationDependency.Value = true
+				values.ApplicationDependencies[idx].Value = true
+				delete(templateValues, applicationDependency.Name)
+				templateValues[applicationDependency.Name] = true
+				// check that the application.Configuration.sha is include in
+				// `git rev-parse applicationDependency.shaRange`
 			}
 		}
 	}
-	fmt.Printf("Application dependencies: %+v\n", values.ApplicationDependencies)
 	// render cluster values
-	fmt.Printf("Cluster values: %+v\n", values.ClusterValues)
-	for _, clusterValue := range values.ClusterValues {
+	logger.Actionf("render cluster values")
+	for idx, clusterValue := range values.ClusterValues {
 		t := template.Must(template.New("clusterValue").Parse(clusterValue.Template))
 		var tpl bytes.Buffer
 		err := t.Execute(&tpl, clusterConfig)
 		if err != nil {
 			return fmt.Errorf("error in the cluster value with name %s: %w", clusterValue.Name, err)
 		}
-		fmt.Println("New clusterValue: %s", tpl.String())
-		clusterValue.Value = tpl.String()
+		values.ClusterValues[idx].Value = tpl.String()
+		templateValues[clusterValue.Name] = tpl.String()
 	}
-	fmt.Printf("Cluster values: %+v\n", values.ClusterValues)
 	// render application values ?
 
+	// render the application configuration file
+	logger.Actionf("render the application configuration file")
+	t := template.Must(template.New("applicationConfig").Parse(string(applicationConfigData)))
+	var tpl bytes.Buffer
+	err = t.Execute(&tpl, templateValues)
+	if err != nil {
+		return fmt.Errorf("error while rendering the application configuration file: %w", err)
+	}
+	applicationConfigString := tpl.String()
 	// create ApplicationConfig struct
+	logger.Actionf("create ApplicationConfig struct")
 	applicationConfig := &ApplicationConfiguration{}
-	err = yaml.Unmarshal([]byte(applicationConfigData), &applicationConfig)
+	err = yaml.Unmarshal([]byte(applicationConfigString), &applicationConfig)
 	if err != nil {
 		return err
 	}
 	applicationConfig.Repository = addArgs.originUrl
 	applicationConfig.Sha = head
-
-	// applicationConfigYaml, err := yaml.Marshal(applicationConfig)
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println(string(applicationConfigYaml))
-
-	// --> return here <--
-	return nil
-
-	// f, err := os.Create(filepath.Join(tmpDir, "config.yaml"))
-	// if err != nil {
-	// return err
-	// }
-	// l, err := f.WriteString(string(applicationConfigYaml))
-	// if err != nil {
-	// f.Close()
-	// return err
-	// }
-	// if l > 0 {
-	// logger.Successf("created file")
-	// }
-	// err = f.Close()
-	// if err != nil {
-	// return err
-	// }
-	// logger.Actionf("committing and pushing application configuration file")
+	applicationConfig.Values = *values
+	// make sure all dependencies are true
+	for idx, dep := range applicationConfig.Dependencies {
+		if dep == false {
+			return fmt.Errorf("dependency number %d of the application is not fulfilled", idx)
+		}
+	}
+	// create application repository to destination
+	logger.Actionf("create application repository to destination")
 	err = commitAndpush(gitClient, addArgs.authorName, addArgs.authorEmail, "Initialize application repository", addArgs.originBranch, addArgs.destinationUrl, rootArgs.timeout)
 	if err != nil {
 		return err
@@ -206,25 +209,23 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	/////////////////////////////
-	// Update Fleet repository //
-	/////////////////////////////
-
-	logger.Actionf("updating cluster config file")
+	// add new application to the cluster configuration
+	logger.Actionf("add new application to the cluster configuration")
 	clusterConfig.Applications = appendApplicationIfMissing(clusterConfig.Applications, Application{
-		Name:       applicationConfig.Name,
-		Repository: addArgs.destinationUrl,
+		Name:          applicationConfig.Name,
+		Repository:    addArgs.destinationUrl,
+		Configuration: *applicationConfig,
 	})
+	// write new configuration to file
 	clusterConfigYaml, err := yaml.Marshal(clusterConfig)
 	if err != nil {
 		return err
 	}
-	f, err = os.Create(filepath.Join(tmpDirFleet, "config.yaml"))
+	f, err := os.Create(filepath.Join(tmpDirFleet, "config.yaml"))
 	if err != nil {
 		return err
 	}
-	l, err = f.WriteString(string(clusterConfigYaml))
+	l, err := f.WriteString(string(clusterConfigYaml))
 	if err != nil {
 		f.Close()
 		return err
@@ -236,11 +237,14 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logger.Actionf("committing and pushing cluster configuration file")
+	// update cluster configuration on remote
+	logger.Actionf("update cluster configuration on remote")
 	err = commitAndpush(gitClientFleet, addArgs.authorName, addArgs.authorEmail, "Update cluster configuration file", addArgs.fleetBranch, "", rootArgs.timeout)
 	if err != nil {
 		return err
 	}
+	// create the application folder in the cluster repository
+	logger.Actionf("create the application folder in the cluster repository")
 	pathToApplications := filepath.Join(tmpDirFleet, "applications")
 	pathToApplicationsBase := filepath.Join(pathToApplications, "base")
 	pathToApplicationsBaseApplication := filepath.Join(pathToApplicationsBase, applicationConfig.Name)
@@ -248,10 +252,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	////////////////////////////
-	// Create new tenant file
-	logger.Actionf("creating tenant configuration file")
+	// create the rbac.yaml file
+	logger.Actionf("create the rbac.yaml file")
 	tenant := applicationConfig.Name
 	ns := applicationConfig.Name
 	clusterRole := "cluster-admin"
@@ -270,10 +272,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err := validation.IsQualifiedName(serviceAccountName); len(err) > 0 {
 		return fmt.Errorf("invalid service account name '%s': %v", ns, err)
 	}
-
 	objLabels := make(map[string]string)
 	objLabels[tenantLabel] = tenant
-
 	namespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ns,
@@ -360,9 +360,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	////////////////////////////
-	// Create source git file
-	logger.Actionf("creating source git file")
+	// create the sync.yaml file
+	logger.Actionf("create the sync.yaml file")
 	name := applicationConfig.Name
 	u, err := url.Parse(addArgs.destinationUrl)
 	if err != nil {
@@ -391,7 +390,7 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		},
 		Spec: kustomizev1.KustomizationSpec{
 			ServiceAccountName: serviceAccountName,
-			// DependsOn: utils.MakeDependsOn(kustomizationArgs.dependsOn),
+			DependsOn:          applicationConfig.DependsOn,
 			Interval: metav1.Duration{
 				Duration: 5 * time.Minute,
 			},
@@ -423,9 +422,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	////////////////////////////
-	// Create kustomization file
-	logger.Actionf("creating kustomization file")
+	// create the kustomization.yaml file
+	logger.Actionf("create the kustomization.yaml file")
 	kustom := kustomize.Kustomization{
 		Resources: []string{"rbac.yaml", "sync.yaml"},
 	}
@@ -449,9 +447,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	///////////////////////
-	// Create patch file
-	logger.Actionf("creating application patch file")
+	// create the patch file
+	logger.Actionf("create the patch file")
 	applicationPatch := kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -481,9 +478,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	////////////////////////////////////////
-	// Create or update applications file
-	logger.Actionf("creating applications file")
+	// add the application to the applications.yaml file
+	logger.Actionf("add the application to the applications.yaml file")
 	var applications kustomize.Kustomization
 	if _, err := os.Stat(filepath.Join(pathToApplications, "kustomization.yaml")); errors.Is(err, os.ErrNotExist) {
 		applications = kustomize.Kustomization{
@@ -525,7 +521,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logger.Actionf("committing and pushing application files to fleet repository")
+	// push all the application files to the remote cluster repository
+	logger.Actionf("push all the application files to the remote cluster repository")
 	err = commitAndpush(gitClientFleet, addArgs.authorName, addArgs.authorEmail, "Update cluster configuration file", addArgs.fleetBranch, "", rootArgs.timeout)
 	if err != nil {
 		return err
