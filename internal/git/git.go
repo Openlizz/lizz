@@ -48,5 +48,6 @@ type Git interface {
 	Push(ctx context.Context, caBundle []byte) error
 	Status() (bool, error)
 	Head() (string, error)
+	CreateRemote(url, name string) (string, error)
 	Path() string
 }

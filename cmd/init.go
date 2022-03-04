@@ -16,36 +16,99 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
+	// gogitv5 "github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
-// initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("init called")
-	},
+	Short: "",
+	Long:  ``,
+	RunE:  initCmdRun,
 }
 
+type initFlags struct {
+	originUrl      string
+	originBranch   string
+	destinationUrl string
+	interval       time.Duration
+	username       string
+	password       string
+	silent         bool
+
+	authorName  string
+	authorEmail string
+}
+
+var initArgs initFlags
+
 func init() {
+	initCmd.Flags().StringVar(&initArgs.originUrl, "originUrl", "", "Git repository URL")
+	initCmd.Flags().StringVar(&initArgs.originBranch, "originBranch", "main", "Git branch of the repository")
+	initCmd.Flags().StringVar(&initArgs.destinationUrl, "destinationUrl", "", "Git repository URL")
+	initCmd.Flags().DurationVar(&initArgs.interval, "interval", time.Minute, "sync interval")
+	initCmd.Flags().StringVarP(&initArgs.username, "username", "u", "git", "basic authentication username")
+	initCmd.Flags().StringVarP(&initArgs.password, "password", "p", "", "basic authentication password")
+	initCmd.Flags().BoolVarP(&initArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+
+	initCmd.Flags().StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	initCmd.Flags().StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
+
 	rootCmd.AddCommand(initCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func initCmdRun(cmd *cobra.Command, args []string) error {
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// initCmd.PersistentFlags().String("foo", "", "A help for foo")
+	/////////////////////////////
+	// Create Fleet repository //
+	/////////////////////////////
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	gitClient, tmpDir, err := cloneRepositoryTemp(initArgs.originUrl, initArgs.originBranch, initArgs.username, initArgs.password, rootArgs.timeout)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+	head, err := gitClient.Head()
+	if err != nil {
+		return err
+	}
+	clusterConfig := ClusterConfig{
+		Repository:     initArgs.originUrl,
+		Sha:            head,
+		Applications:   []Application{},
+		Configurations: []Configuration{},
+	}
+	clusterConfigYaml, err := yaml.Marshal(&clusterConfig)
+	if err != nil {
+		return err
+	}
+	logger.Actionf("creating cluster config file")
+	f, err := os.Create(filepath.Join(tmpDir, "config.yaml"))
+	if err != nil {
+		return err
+	}
+	l, err := f.WriteString(string(clusterConfigYaml))
+	if err != nil {
+		f.Close()
+		return err
+	}
+	if l > 0 {
+		logger.Successf("created file")
+	}
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	logger.Actionf("committing and pushing fleet configuration file")
+	err = commitAndpush(gitClient, initArgs.authorName, initArgs.authorEmail, "Initialize fleet repository", initArgs.originBranch, initArgs.destinationUrl, rootArgs.timeout)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

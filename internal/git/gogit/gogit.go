@@ -18,6 +18,7 @@ package gogit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,7 +33,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 
-	"gitlab.com/openlizz/lizz/git"
+	"gitlab.com/openlizz/lizz/internal/git"
 )
 
 type GoGit struct {
@@ -164,7 +165,14 @@ func (g *GoGit) Commit(message git.Commit, opts ...git.Option) (string, error) {
 		abspath := filepath.Join(g.path, file)
 		info, err := os.Lstat(abspath)
 		if err != nil {
-			return "", fmt.Errorf("checking if %s is a symlink: %w", file, err)
+			// file has been removed and need to be added
+			if errors.Is(err, os.ErrNotExist) {
+				_, _ = wt.Add(file)
+				changed = true
+				continue
+			} else {
+				return "", fmt.Errorf("checking if %s is a symlink: %w", file, err)
+			}
 		}
 		if info.Mode()&os.ModeSymlink > 0 {
 			// symlinks are OK; broken symlinks are probably a result
@@ -210,13 +218,13 @@ func (g *GoGit) Commit(message git.Commit, opts ...git.Option) (string, error) {
 	return commit.String(), nil
 }
 
-func (g *GoGit) Push(ctx context.Context, caBundle []byte) error {
+func (g *GoGit) Push(ctx context.Context, remoteName string, caBundle []byte) error {
 	if g.repository == nil {
 		return git.ErrNoGitRepository
 	}
 
 	return g.repository.PushContext(ctx, &gogit.PushOptions{
-		RemoteName: gogit.DefaultRemoteName,
+		RemoteName: remoteName,
 		Auth:       g.auth,
 		Progress:   nil,
 		CABundle:   caBundle,
@@ -247,6 +255,20 @@ func (g *GoGit) Head() (string, error) {
 		return "", err
 	}
 	return head.Hash().String(), nil
+}
+
+func (g *GoGit) CreateRemote(url, name string) (string, error) {
+	if g.repository == nil {
+		return "", git.ErrNoGitRepository
+	}
+	remote, err := g.repository.CreateRemote(&config.RemoteConfig{
+		Name: name,
+		URLs: []string{url},
+	})
+	if err != nil {
+		return "", err
+	}
+	return remote.Config().Name, nil
 }
 
 func (g *GoGit) Path() string {
