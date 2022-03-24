@@ -4,12 +4,6 @@ import (
 	"github.com/fluxcd/pkg/runtime/dependency"
 )
 
-type Spec struct {
-	RepositoryUrl string `json:"repositoryUrl"`
-	ShaRange      string `json:"shaRange"`
-	template      string `json:"template"`
-}
-
 type ApplicationDependency struct {
 	Name       string `json:"name"`
 	Repository string `json:"repository"`
@@ -31,21 +25,37 @@ type ApplicationValue struct {
 	Template      string `json:"template"`
 	Value         string `json:"value"`
 }
+type Password struct {
+	Name        string `json:"name"`
+	Lenght      int    `json:"length"`
+	NumDigits   int    `json:"numDigits"`
+	NumSymbols  int    `json:"numSymbols"`
+	NoUpper     bool   `json:"noUpper"`
+	AllowRepeat bool   `json:"allowRepeat"`
+}
 
 type Values struct {
 	ApplicationDependencies []ApplicationDependency `json:"applicationDependencies,omitempty"`
 	ClusterValues           []ClusterValue          `json:"clusterValues,omitempty"`
 	ApplicationValues       []ApplicationValue      `json:"applicationValues,omitempty"`
+	Passwords               []Password              `json:"passwords,omitempty"`
+}
+
+type Encryption struct {
+	Enabled    bool     `json:"enabled"`
+	InputPaths []string `json:"inputPaths"`
 }
 
 type ApplicationConfiguration struct {
-	Name               string                                         `json:"name"`
-	ServiceAccountName string                                         `json:"serviceAccountName"`
-	Repository         string                                         `json:"repository"`
-	Sha                string                                         `json:"sha"`
-	Values             Values                                         `json:"values,omitempty"`
-	Dependencies       []bool                                         `json:"dependencies,omitempty"`
-	DependsOn          []dependency.CrossNamespaceDependencyReference `json:"dependsOn,omitempty"`
+	Name                string                                         `json:"name"`
+	ServiceAccountName  string                                         `json:"serviceAccountName"`
+	Repository          string                                         `json:"repository"`
+	Sha                 string                                         `json:"sha"`
+	Values              Values                                         `json:"values,omitempty"`
+	TemplatingBlackList []string                                       `json:"templatingBlackList,omitempty"`
+	Encryption          Encryption                                     `json:"encryption,omitempty"`
+	Dependencies        []bool                                         `json:"dependencies,omitempty"`
+	DependsOn           []dependency.CrossNamespaceDependencyReference `json:"dependsOn,omitempty"`
 }
 
 type Application struct {
@@ -62,6 +72,8 @@ type Configuration struct {
 type ClusterConfig struct {
 	Repository     string          `json:"repository"`
 	Sha            string          `json:"sha"`
+	AgeKey         string          `json:"ageKey,omitempty"`
+	SopsAgeSecret  string          `json:"sopsAgeSecret,omitempty"`
 	Applications   []Application   `json:"applications,omitempty"`
 	Configurations []Configuration `json:"configurations,omitempty"`
 }

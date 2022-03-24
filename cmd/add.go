@@ -27,8 +27,17 @@ import (
 	"time"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta2"
+	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
+	"github.com/sethvargo/go-password/password"
 	"github.com/spf13/cobra"
+	"go.mozilla.org/sops/cmd/sops/codes"
+	"go.mozilla.org/sops/v3"
+	"go.mozilla.org/sops/v3/aes"
+	"go.mozilla.org/sops/v3/age"
+	"go.mozilla.org/sops/v3/cmd/sops/common"
+	"go.mozilla.org/sops/v3/keys"
+	"go.mozilla.org/sops/v3/keyservice"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,17 +59,18 @@ const (
 )
 
 type addFlags struct {
-	originUrl      string
-	originBranch   string
-	clusterRole    bool
-	path           string
-	destinationUrl string
-	fleetUrl       string
-	fleetBranch    string
-	interval       time.Duration
-	username       string
-	password       string
-	silent         bool
+	originUrl        string
+	originBranch     string
+	clusterRole      bool
+	decryptionSecret string
+	path             string
+	destinationUrl   string
+	fleetUrl         string
+	fleetBranch      string
+	interval         time.Duration
+	username         string
+	password         string
+	silent           bool
 
 	authorName  string
 	authorEmail string
@@ -72,6 +82,7 @@ func init() {
 	addCmd.Flags().StringVar(&addArgs.originUrl, "originUrl", "", "Git repository URL where the application is located")
 	addCmd.Flags().StringVar(&addArgs.originBranch, "originBranch", "main", "Git branch of the application origin repository")
 	addCmd.Flags().BoolVar(&addArgs.clusterRole, "clusterRole", false, "assumes the deploy key is already setup, skips confirmation")
+	addCmd.Flags().StringVar(&addArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
 	addCmd.Flags().StringVar(&addArgs.path, "path", "./default", "path to kustomization in the application repository")
 	addCmd.Flags().StringVar(&addArgs.destinationUrl, "destinationUrl", "", "Git repository URL where to push the application repository")
 	addCmd.Flags().StringVar(&addArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
@@ -172,6 +183,15 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		values.ClusterValues[idx].Value = tpl.String()
 		templateValues[clusterValue.Name] = tpl.String()
 	}
+	// render passwords
+	logger.Actionf("render passwords")
+	for _, pwd := range values.Passwords {
+		res, err := password.Generate(pwd.Lenght, pwd.NumDigits, pwd.NumSymbols, pwd.NoUpper, pwd.AllowRepeat)
+		if err != nil {
+			return err
+		}
+		templateValues[pwd.Name] = res
+	}
 	// render application values ?
 
 	// render the application configuration file
@@ -194,9 +214,98 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	applicationConfig.Sha = head
 	applicationConfig.Values = *values
 	// make sure all dependencies are true
+	logger.Actionf("make sure all dependencies are true")
 	for idx, dep := range applicationConfig.Dependencies {
 		if dep == false {
 			return fmt.Errorf("dependency number %d of the application is not fulfilled", idx)
+		}
+	}
+	// render all the application files using the templateValues
+	logger.Actionf("render all the application files using the templateValues")
+	var applicationFilesPaths []string
+	err = filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() == false && strings.Index(path, ".git") == -1 {
+			blackListed := false
+			for _, blackListedPath := range append(applicationConfig.TemplatingBlackList, "config.yaml") {
+				backListedInfo, err := os.Stat(filepath.Join(tmpDir, blackListedPath))
+				if err != nil {
+					return err
+				}
+				if os.SameFile(backListedInfo, info) {
+					blackListed = true
+				}
+			}
+			if blackListed == false {
+				applicationFilesPaths = append(applicationFilesPaths, path)
+			}
+		}
+		return nil
+	})
+	for _, path := range applicationFilesPaths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		t := template.Must(template.New("applicationFile").Parse(string(data)))
+		var tpl bytes.Buffer
+		err = t.Execute(&tpl, templateValues)
+		if err != nil {
+			return fmt.Errorf("error while rendering the application configuration file: %w", err)
+		}
+		file, err := os.Create(path)
+		if err != nil {
+			return common.NewExitError(fmt.Sprintf("Could not open in-place file for writing: %s", err), codes.CouldNotWriteOutputFile)
+		}
+		defer file.Close()
+		_, err = file.Write(tpl.Bytes())
+		if err != nil {
+			return err
+		}
+	}
+	// encrypt application secrets
+	logger.Actionf("encrypt application secrets")
+	if applicationConfig.Encryption.Enabled == true {
+		if clusterConfig.AgeKey == "" {
+			return fmt.Errorf("secret encryption needed for the application but not configured in the cluster config file")
+		}
+		svcs := []keyservice.KeyServiceClient{
+			keyservice.NewLocalClient(),
+		}
+		key, err := age.MasterKeyFromRecipient(clusterConfig.AgeKey)
+		if err != nil {
+			return err
+		}
+		groups := []sops.KeyGroup{[]keys.MasterKey{key}}
+		var threshold int
+		for _, inputPath := range applicationConfig.Encryption.InputPaths {
+			fileName := filepath.Join(tmpDir, inputPath)
+			inputStore := common.DefaultStoreForPathOrFormat(fileName, "yaml")
+			outputStore := common.DefaultStoreForPathOrFormat(fileName, "yaml")
+			output, err := encrypt(encryptOpts{
+				OutputStore:    outputStore,
+				InputStore:     inputStore,
+				InputPath:      fileName,
+				Cipher:         aes.NewCipher(),
+				EncryptedRegex: "^(data|stringData)$",
+				KeyServices:    svcs,
+				KeyGroups:      groups,
+				GroupThreshold: threshold,
+			})
+			if err != nil {
+				return err
+			}
+			file, err := os.Create(fileName)
+			if err != nil {
+				return common.NewExitError(fmt.Sprintf("Could not open in-place file for writing: %s", err), codes.CouldNotWriteOutputFile)
+			}
+			defer file.Close()
+			_, err = file.Write(output)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	// create application repository to destination
@@ -383,6 +492,13 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 			Reference: &sourcev1.GitRepositoryRef{Branch: "main"},
 		},
 	}
+	var decryption *kustomizev1.Decryption
+	if applicationConfig.Encryption.Enabled == true {
+		decryption = &kustomizev1.Decryption{
+			Provider:  "sops",
+			SecretRef: &meta.LocalObjectReference{Name: addArgs.decryptionSecret},
+		}
+	}
 	kustomization := kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -400,6 +516,7 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 				Name: name,
 			},
 			Validation: "client",
+			Decryption: decryption,
 		},
 	}
 	sync, err := exportRepository(gitRepository, kustomization)
@@ -422,10 +539,36 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	// create secret.yaml
+	if applicationConfig.Encryption.Enabled == true {
+		logger.Actionf("create secret.yaml")
+		f, err = os.Create(filepath.Join(pathToApplicationsBaseApplication, "secret.yaml"))
+		if err != nil {
+			return err
+		}
+		l, err = f.WriteString(strings.Replace(clusterConfig.SopsAgeSecret, "namespace: flux-system", "namespace: "+ns, 1))
+		if err != nil {
+			f.Close()
+			return err
+		}
+		if l > 0 {
+			logger.Successf("created file")
+		}
+		err = f.Close()
+		if err != nil {
+			return err
+		}
+	}
 	// create the kustomization.yaml file
 	logger.Actionf("create the kustomization.yaml file")
+	var resources []string
+	if applicationConfig.Encryption.Enabled == true {
+		resources = []string{"rbac.yaml", "sync.yaml", "secret.yaml"}
+	} else {
+		resources = []string{"rbac.yaml", "sync.yaml"}
+	}
 	kustom := kustomize.Kustomization{
-		Resources: []string{"rbac.yaml", "sync.yaml"},
+		Resources: resources,
 	}
 	kustomString, err := exportKustomization(kustom)
 	if err != nil {
