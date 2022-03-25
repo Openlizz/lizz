@@ -16,13 +16,10 @@ limitations under the License.
 package cmd
 
 import (
-	"os"
-	"path/filepath"
 	"time"
 
-	// gogitv5 "github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
+	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
 var initCmd = &cobra.Command{
@@ -63,52 +60,18 @@ func init() {
 }
 
 func initCmdRun(cmd *cobra.Command, args []string) error {
-
-	/////////////////////////////
-	// Create Fleet repository //
-	/////////////////////////////
-
-	gitClient, tmpDir, err := cloneRepositoryTemp(initArgs.originUrl, initArgs.originBranch, initArgs.username, initArgs.password, rootArgs.timeout)
+	clusterRepo, err := repo.CloneClusterRepo(initArgs.originUrl, initArgs.originBranch, initArgs.username, initArgs.password, rootArgs.timeout)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpDir)
-	head, err := gitClient.Head()
+	head, err := clusterRepo.Git().Head()
 	if err != nil {
 		return err
 	}
-	clusterConfig := ClusterConfig{
-		Repository:     initArgs.originUrl,
-		Sha:            head,
-		Applications:   []Application{},
-		Configurations: []Configuration{},
-	}
-	clusterConfigYaml, err := yaml.Marshal(&clusterConfig)
+	clusterRepo.NewClusterConfig(initArgs.originUrl, head)
+	clusterRepo.CommitPush(initArgs.authorName, initArgs.authorEmail, "Initialize cluster repository", initArgs.destinationUrl, rootArgs.timeout)
 	if err != nil {
 		return err
 	}
-	logger.Actionf("creating cluster config file")
-	f, err := os.Create(filepath.Join(tmpDir, "config.yaml"))
-	if err != nil {
-		return err
-	}
-	l, err := f.WriteString(string(clusterConfigYaml))
-	if err != nil {
-		f.Close()
-		return err
-	}
-	if l > 0 {
-		logger.Successf("created file")
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	logger.Actionf("committing and pushing fleet configuration file")
-	err = commitAndpush(gitClient, initArgs.authorName, initArgs.authorEmail, "Initialize fleet repository", initArgs.originBranch, initArgs.destinationUrl, rootArgs.timeout)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

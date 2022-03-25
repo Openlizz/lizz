@@ -16,15 +16,10 @@ limitations under the License.
 package cmd
 
 import (
-	"errors"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
-	kustomizePatch "sigs.k8s.io/kustomize/pkg/patch"
-	kustomize "sigs.k8s.io/kustomize/pkg/types"
-	"sigs.k8s.io/yaml"
+	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
 var removeCmd = &cobra.Command{
@@ -70,125 +65,22 @@ func init() {
 }
 
 func removeCmdRun(cmd *cobra.Command, args []string) error {
-
-	gitClientFleet, tmpDirFleet, err := cloneRepositoryTemp(removeArgs.fleetUrl, removeArgs.fleetBranch, removeArgs.username, removeArgs.password, rootArgs.timeout)
+	clusterRepo, err := repo.CloneClusterRepo(addArgs.fleetUrl, addArgs.fleetBranch, addArgs.username, addArgs.password, rootArgs.timeout)
 	if err != nil {
 		return err
 	}
-	// defer os.RemoveAll(tmpDirFleet)
-	var clusterConfig *ClusterConfig
-	if _, err := os.Stat(filepath.Join(tmpDirFleet, "config.yaml")); err == nil {
-		logger.Actionf("updating cluster config file")
-		data, err := os.ReadFile(filepath.Join(tmpDirFleet, "config.yaml"))
-		if err != nil {
-			return err
-		}
-		clusterConfig = &ClusterConfig{}
-		err = yaml.Unmarshal([]byte(data), &clusterConfig)
-		if err != nil {
-			return err
-		}
-	} else {
-		return err
-	}
-	clusterConfig.Applications = removeApplicationByName(clusterConfig.Applications, removeArgs.applicationName)
-	clusterConfigYaml, err := yaml.Marshal(clusterConfig)
+	err = clusterRepo.OpenClusterConfig()
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(filepath.Join(tmpDirFleet, "config.yaml"))
+	err = clusterRepo.RemoveApplication(clusterRepo.Config().Repository, removeArgs.applicationName)
 	if err != nil {
 		return err
 	}
-	l, err := f.WriteString(string(clusterConfigYaml))
-	if err != nil {
-		f.Close()
-		return err
-	}
-	if l > 0 {
-		logger.Successf("created file")
-	}
-	err = f.Close()
+	err = clusterRepo.CommitPush(addArgs.authorName, addArgs.authorEmail, "[remove application] Remove "+removeArgs.applicationName+" from the cluster", "", rootArgs.timeout)
 	if err != nil {
 		return err
 	}
-	logger.Actionf("committing and pushing cluster configuration file")
-	err = commitAndpush(gitClientFleet, removeArgs.authorName, removeArgs.authorEmail, "Update cluster configuration file", removeArgs.fleetBranch, "", rootArgs.timeout)
-	if err != nil {
-		return err
-	}
-	pathToApplications := filepath.Join(tmpDirFleet, "applications")
-	pathToApplicationsBase := filepath.Join(pathToApplications, "base")
-	pathToApplicationsBaseApplication := filepath.Join(pathToApplicationsBase, removeArgs.applicationName)
-	if _, err := os.Stat(pathToApplicationsBaseApplication); err == nil {
-		err = os.RemoveAll(pathToApplicationsBaseApplication)
-		if err != nil {
-			return err
-		}
-	} else if errors.Is(err, os.ErrNotExist) {
-		logger.Warningf("impossible to remove %s", pathToApplicationsBaseApplication)
-
-	} else {
-		return err
-
-	}
-	if _, err := os.Stat(filepath.Join(pathToApplications, removeArgs.applicationName+"-patch.yaml")); err == nil {
-		err = os.RemoveAll(filepath.Join(pathToApplications, removeArgs.applicationName+"-patch.yaml"))
-		if err != nil {
-			return err
-		}
-	} else if errors.Is(err, os.ErrNotExist) {
-		logger.Warningf("impossible to remove %s", filepath.Join(pathToApplications, removeArgs.applicationName+"-patch.yaml"))
-
-	} else {
-		return err
-
-	}
-	var applications kustomize.Kustomization
-	if _, err := os.Stat(filepath.Join(pathToApplications, "kustomization.yaml")); errors.Is(err, os.ErrNotExist) {
-		applications = kustomize.Kustomization{
-			Resources:             []string{},
-			PatchesStrategicMerge: []kustomizePatch.StrategicMerge{},
-		}
-
-	} else {
-		data, err := os.ReadFile(filepath.Join(pathToApplications, "kustomization.yaml"))
-		if err != nil {
-			return err
-		}
-		applicationsPtr := &kustomize.Kustomization{}
-		err = yaml.Unmarshal([]byte(data), &applicationsPtr)
-		if err != nil {
-			return err
-		}
-		applications = *applicationsPtr
-		applications.Resources = removeString(applications.Resources, "./base/"+removeArgs.applicationName)
-		applications.PatchesStrategicMerge = removeStrategicMerge(applications.PatchesStrategicMerge, removeArgs.applicationName+"-patch.yaml")
-	}
-	applicationsString, err := exportKustomization(applications)
-	if err != nil {
-		return err
-	}
-	f, err = os.Create(filepath.Join(pathToApplications, "kustomization.yaml"))
-	if err != nil {
-		return err
-	}
-	l, err = f.WriteString(applicationsString)
-	if err != nil {
-		f.Close()
-		return err
-	}
-	if l > 0 {
-		logger.Successf("created file")
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	logger.Actionf("committing and pushing application files to fleet repository")
-	err = commitAndpush(gitClientFleet, removeArgs.authorName, removeArgs.authorEmail, "Update cluster configuration file", removeArgs.fleetBranch, "", rootArgs.timeout)
-	if err != nil {
-		return err
-	}
+	return nil
 	return nil
 }
