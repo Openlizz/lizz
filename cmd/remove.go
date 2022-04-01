@@ -31,16 +31,12 @@ var removeCmd = &cobra.Command{
 
 type removeFlags struct {
 	applicationName string
-	originUrl       string
-	originBranch    string
-	clusterRole     bool
-	path            string
-	destinationUrl  string
 	fleetUrl        string
 	fleetBranch     string
 	interval        time.Duration
 	username        string
 	password        string
+	privateKeyFile  string
 	silent          bool
 
 	authorName  string
@@ -50,22 +46,39 @@ type removeFlags struct {
 var removeArgs removeFlags
 
 func init() {
-	removeCmd.Flags().StringVar(&removeArgs.applicationName, "applicationName", "", "Name of the application to remove")
-	removeCmd.Flags().StringVar(&removeArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
-	removeCmd.Flags().StringVar(&removeArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
+	removeCmd.Flags().
+		StringVar(&removeArgs.applicationName, "applicationName", "", "Name of the application to remove")
+	removeCmd.Flags().
+		StringVar(&removeArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
+	removeCmd.Flags().
+		StringVar(&removeArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
 	removeCmd.Flags().DurationVar(&removeArgs.interval, "interval", time.Minute, "sync interval")
-	removeCmd.Flags().StringVarP(&removeArgs.username, "username", "u", "git", "basic authentication username")
-	removeCmd.Flags().StringVarP(&removeArgs.password, "password", "p", "", "basic authentication password")
-	removeCmd.Flags().BoolVarP(&removeArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+	removeCmd.Flags().
+		StringVarP(&removeArgs.username, "username", "u", "git", "basic authentication username")
+	removeCmd.Flags().
+		StringVarP(&removeArgs.password, "password", "p", "", "basic authentication password")
+	removeCmd.Flags().
+		StringVar(&removeArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
+	removeCmd.Flags().
+		BoolVarP(&removeArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
 
-	removeCmd.Flags().StringVar(&removeArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	removeCmd.Flags().StringVar(&removeArgs.authorEmail, "author-email", "", "author email for Git commits")
+	removeCmd.Flags().
+		StringVar(&removeArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	removeCmd.Flags().
+		StringVar(&removeArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(removeCmd)
 }
 
 func removeCmdRun(cmd *cobra.Command, args []string) error {
-	clusterRepo, err := repo.CloneClusterRepo(addArgs.fleetUrl, addArgs.fleetBranch, addArgs.username, addArgs.password, rootArgs.timeout)
+	clusterRepo, err := repo.CloneClusterRepo(
+		removeArgs.fleetUrl,
+		removeArgs.fleetBranch,
+		removeArgs.username,
+		removeArgs.password,
+		removeArgs.privateKeyFile,
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -73,14 +86,19 @@ func removeCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = clusterRepo.RemoveApplication(clusterRepo.Config().Repository, removeArgs.applicationName)
+	err = clusterRepo.RemoveApplication(removeArgs.applicationName)
 	if err != nil {
 		return err
 	}
-	err = clusterRepo.CommitPush(addArgs.authorName, addArgs.authorEmail, "[remove application] Remove "+removeArgs.applicationName+" from the cluster", "", rootArgs.timeout)
+	err = clusterRepo.CommitPush(
+		removeArgs.authorName,
+		removeArgs.authorEmail,
+		"[remove application] Remove "+removeArgs.applicationName+" from the cluster",
+		"",
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
-	return nil
 	return nil
 }

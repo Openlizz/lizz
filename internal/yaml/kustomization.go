@@ -7,12 +7,14 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func NewKustomizationYaml(decryption bool) (string, error) {
-	var resources []string
+func NewKustomizationYaml(decryption bool, sourceSecret bool) (string, error) {
+	resources := []string{"rbac.yaml"}
+	if sourceSecret == true {
+		resources = append(resources, "sourcesecret.yaml")
+	}
+	resources = append(resources, "sync.yaml")
 	if decryption == true {
-		resources = []string{"rbac.yaml", "sync.yaml", "secret.yaml"}
-	} else {
-		resources = []string{"rbac.yaml", "sync.yaml"}
+		resources = append(resources, "secret.yaml")
 	}
 	kustomizeC := kustomize.Kustomization{
 		Resources: resources,

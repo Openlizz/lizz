@@ -8,19 +8,37 @@ import (
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta2"
 	"github.com/fluxcd/pkg/apis/meta"
-	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
 
-func NewSyncYaml(namespace string, name string, URL string, decryption bool, decryptionSecret string, dependsOn []dependency.CrossNamespaceDependencyReference, serviceAccountName string) (string, error) {
+func NewSyncYaml(
+	namespace string,
+	name string,
+	URL string,
+	decryption bool,
+	decryptionSecret string,
+	dependsOn []meta.NamespacedObjectReference,
+	serviceAccountName string,
+	sourceSecret bool,
+	sourceSecretName string,
+) (string, error) {
 	uURL, err := url.Parse(URL)
 	if err != nil {
 		return "", fmt.Errorf("git URL parse failed: %w", err)
 	}
-	if uURL.Scheme != "http" && uURL.Scheme != "https" {
-		return "", fmt.Errorf("git URL scheme '%s' not supported, can be: http and https", uURL.Scheme)
+	if uURL.Scheme != "http" && uURL.Scheme != "https" && uURL.Scheme != "ssh" {
+		return "", fmt.Errorf(
+			"git URL scheme '%s' not supported, can be: http, https, or ssh",
+			uURL.Scheme,
+		)
+	}
+	var secretRef *meta.LocalObjectReference
+	if sourceSecret == true {
+		secretRef = &meta.LocalObjectReference{Name: sourceSecretName}
+	} else {
+		secretRef = &meta.LocalObjectReference{}
 	}
 	gitRepositoryC := sourcev1.GitRepository{
 		ObjectMeta: metav1.ObjectMeta{
@@ -33,6 +51,7 @@ func NewSyncYaml(namespace string, name string, URL string, decryption bool, dec
 			},
 			URL:       URL,
 			Reference: &sourcev1.GitRepositoryRef{Branch: "main"},
+			SecretRef: secretRef,
 		},
 	}
 	var decryptionC *kustomizev1.Decryption
@@ -69,7 +88,10 @@ func NewSyncYaml(namespace string, name string, URL string, decryption bool, dec
 	return syncY, nil
 }
 
-func exportRepository(gitRepository sourcev1.GitRepository, kustomization kustomizev1.Kustomization) (string, error) {
+func exportRepository(
+	gitRepository sourcev1.GitRepository,
+	kustomization kustomizev1.Kustomization,
+) (string, error) {
 	var builder strings.Builder
 	gitRepository.TypeMeta = metav1.TypeMeta{
 		APIVersion: "source.toolkit.fluxcd.io/v1beta1",

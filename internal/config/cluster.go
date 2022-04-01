@@ -88,7 +88,7 @@ func (c *ClusterConfig) AddApplication(repository string, applicationConfig *App
 	})
 }
 
-func (c *ClusterConfig) RemoveApplication(repository string, name string) {
+func (c *ClusterConfig) RemoveApplication(name string) {
 	c.Applications = removeApplicationByName(c.Applications, name)
 }
 

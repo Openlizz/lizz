@@ -61,11 +61,17 @@ func Encrypt(opts EncryptOpts) (encryptedFile []byte, err error) {
 	// Load the file
 	fileBytes, err := ioutil.ReadFile(opts.InputPath)
 	if err != nil {
-		return nil, common.NewExitError(fmt.Sprintf("Error reading file: %s", err), codes.CouldNotReadInputFile)
+		return nil, common.NewExitError(
+			fmt.Sprintf("Error reading file: %s", err),
+			codes.CouldNotReadInputFile,
+		)
 	}
 	branches, err := opts.InputStore.LoadPlainFile(fileBytes)
 	if err != nil {
-		return nil, common.NewExitError(fmt.Sprintf("Error unmarshalling file: %s", err), codes.CouldNotReadInputFile)
+		return nil, common.NewExitError(
+			fmt.Sprintf("Error unmarshalling file: %s", err),
+			codes.CouldNotReadInputFile,
+		)
 	}
 	if err := ensureNoMetadata(opts, branches[0]); err != nil {
 		return nil, common.NewExitError(err, codes.FileAlreadyEncrypted)
@@ -104,7 +110,10 @@ func Encrypt(opts EncryptOpts) (encryptedFile []byte, err error) {
 
 	encryptedFile, err = opts.OutputStore.EmitEncryptedFile(tree)
 	if err != nil {
-		return nil, common.NewExitError(fmt.Sprintf("Could not marshal tree: %s", err), codes.ErrorDumpingTree)
+		return nil, common.NewExitError(
+			fmt.Sprintf("Could not marshal tree: %s", err),
+			codes.ErrorDumpingTree,
+		)
 	}
 	return
 }

@@ -105,7 +105,8 @@ func (g *GoGit) Clone(ctx context.Context, url, branch string, caBundle []byte) 
 		CABundle:   caBundle,
 	})
 	if err != nil {
-		if err == transport.ErrEmptyRemoteRepository || isRemoteBranchNotFoundErr(err, branchRef.String()) {
+		if err == transport.ErrEmptyRemoteRepository ||
+			isRemoteBranchNotFoundErr(err, branchRef.String()) {
 			return g.Init(url, branch)
 		}
 		return false, err

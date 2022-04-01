@@ -16,7 +16,13 @@ const (
 	tenantLabel = "toolkit.fluxcd.io/tenant"
 )
 
-func NewRbacYaml(namespace string, tenant string, roleName string, clusterRole bool, serviceAccountName string) (string, error) {
+func NewRbacYaml(
+	namespace string,
+	tenant string,
+	roleName string,
+	clusterRole bool,
+	serviceAccountName string,
+) (string, error) {
 	if err := validation.IsQualifiedName(tenant); len(err) > 0 {
 		return "", fmt.Errorf("invalid tenant name '%s': %v", tenant, err)
 	}
@@ -100,7 +106,11 @@ func NewRbacYaml(namespace string, tenant string, roleName string, clusterRole b
 	return rbacY, nil
 }
 
-func exportTenantWithRoleBinding(namespace corev1.Namespace, account corev1.ServiceAccount, roleBinding rbacv1.RoleBinding) (string, error) {
+func exportTenantWithRoleBinding(
+	namespace corev1.Namespace,
+	account corev1.ServiceAccount,
+	roleBinding rbacv1.RoleBinding,
+) (string, error) {
 	var builder strings.Builder
 	namespace.TypeMeta = metav1.TypeMeta{
 		APIVersion: "v1",
@@ -137,7 +147,11 @@ func exportTenantWithRoleBinding(namespace corev1.Namespace, account corev1.Serv
 	return builder.String(), nil
 }
 
-func exportTenantWithClusterRoleBinding(namespace corev1.Namespace, account corev1.ServiceAccount, clusterRoleBinding rbacv1.ClusterRoleBinding) (string, error) {
+func exportTenantWithClusterRoleBinding(
+	namespace corev1.Namespace,
+	account corev1.ServiceAccount,
+	clusterRoleBinding rbacv1.ClusterRoleBinding,
+) (string, error) {
 	var builder strings.Builder
 	namespace.TypeMeta = metav1.TypeMeta{
 		APIVersion: "v1",

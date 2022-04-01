@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
 
-	"github.com/fluxcd/pkg/runtime/dependency"
+	"github.com/fluxcd/pkg/apis/meta"
 	"sigs.k8s.io/yaml"
 )
 
@@ -55,15 +56,15 @@ type Encryption struct {
 }
 
 type ApplicationConfig struct {
-	Name                string                                         `json:"name"`
-	ServiceAccountName  string                                         `json:"serviceAccountName"`
-	Repository          string                                         `json:"repository"`
-	Sha                 string                                         `json:"sha"`
-	Values              Values                                         `json:"values,omitempty"`
-	TemplatingBlackList []string                                       `json:"templatingBlackList,omitempty"`
-	Encryption          Encryption                                     `json:"encryption,omitempty"`
-	Dependencies        []bool                                         `json:"dependencies,omitempty"`
-	DependsOn           []dependency.CrossNamespaceDependencyReference `json:"dependsOn,omitempty"`
+	Name                string                           `json:"name"`
+	ServiceAccountName  string                           `json:"serviceAccountName"`
+	Repository          string                           `json:"repository"`
+	Sha                 string                           `json:"sha"`
+	Values              Values                           `json:"values,omitempty"`
+	TemplatingBlackList []string                         `json:"templatingBlackList,omitempty"`
+	Encryption          Encryption                       `json:"encryption,omitempty"`
+	Dependencies        []bool                           `json:"dependencies,omitempty"`
+	DependsOn           []meta.NamespacedObjectReference `json:"dependsOn,omitempty"`
 }
 
 func OpenApplicationConfig(path string) (*ApplicationConfig, error) {
@@ -83,7 +84,10 @@ func OpenApplicationConfig(path string) (*ApplicationConfig, error) {
 	return c, nil
 }
 
-func RenderApplicationConfig(path string, clusterConfig *ClusterConfig) (*ApplicationConfig, error) {
+func RenderApplicationConfig(
+	path string,
+	clusterConfig *ClusterConfig,
+) (*ApplicationConfig, error) {
 	_, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("The path to the cluster config does not exist: %w.", err)
@@ -120,7 +124,11 @@ func RenderApplicationConfig(path string, clusterConfig *ClusterConfig) (*Applic
 		var tpl bytes.Buffer
 		err := t.Execute(&tpl, clusterConfig)
 		if err != nil {
-			return &ApplicationConfig{}, fmt.Errorf("error in the cluster value with name %s: %w", clusterValue.Name, err)
+			return &ApplicationConfig{}, fmt.Errorf(
+				"error in the cluster value with name %s: %w",
+				clusterValue.Name,
+				err,
+			)
 		}
 		v.ClusterValues[idx].Value = tpl.String()
 		tv[clusterValue.Name] = tpl.String()
@@ -132,7 +140,10 @@ func RenderApplicationConfig(path string, clusterConfig *ClusterConfig) (*Applic
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, tv)
 	if err != nil {
-		return &ApplicationConfig{}, fmt.Errorf("error while rendering the application configuration file: %w", err)
+		return &ApplicationConfig{}, fmt.Errorf(
+			"error while rendering the application configuration file: %w",
+			err,
+		)
 	}
 	c := &ApplicationConfig{}
 	err = yaml.Unmarshal([]byte(tpl.String()), c)
@@ -190,4 +201,17 @@ func extractValuesFromYaml(config string) string {
 		}
 		return strings.ReplaceAll(config[startIndex:startIndex+endIndex[0]], "\t", "  ")
 	}
+}
+
+func UniversalURL(URL string) (string, error) {
+	uURL, err := url.Parse(URL)
+	if err != nil {
+		return "", fmt.Errorf("git URL parse failed: %w", err)
+	}
+	host := uURL.Host
+	path := uURL.Path
+	if path[len(path)-4:] == ".git" {
+		path = path[:len(path)-4]
+	}
+	return host + path, nil
 }

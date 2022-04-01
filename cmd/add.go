@@ -16,9 +16,15 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+	"gitlab.com/openlizz/lizz/internal/config"
+	"gitlab.com/openlizz/lizz/internal/flags"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
@@ -34,18 +40,27 @@ const (
 )
 
 type addFlags struct {
-	originUrl        string
-	originBranch     string
-	clusterRole      bool
-	decryptionSecret string
-	path             string
-	destinationUrl   string
-	fleetUrl         string
-	fleetBranch      string
-	interval         time.Duration
-	username         string
-	password         string
-	silent           bool
+	originUrl          string
+	originBranch       string
+	clusterRole        bool
+	decryptionSecret   string
+	path               string
+	destinationUrl     string
+	destinationPrivate bool
+	fleetUrl           string
+	fleetBranch        string
+	interval           time.Duration
+	sourceSecretName   string
+	username           string
+	password           string
+	tokenAuth          bool
+	keyAlgorithm       flags.PublicKeyAlgorithm
+	keyRSABits         flags.RSAKeyBits
+	keyECDSACurve      flags.ECDSACurve
+	sshHostname        string
+	caFile             string
+	privateKeyFile     string
+	silent             bool
 
 	authorName  string
 	authorEmail string
@@ -60,11 +75,20 @@ func init() {
 	addCmd.Flags().StringVar(&addArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
 	addCmd.Flags().StringVar(&addArgs.path, "path", "./default", "path to kustomization in the application repository")
 	addCmd.Flags().StringVar(&addArgs.destinationUrl, "destinationUrl", "", "Git repository URL where to push the application repository")
+	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "destinationPrivate", true, "true if the destination repository is private and needs credentials")
 	addCmd.Flags().StringVar(&addArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
 	addCmd.Flags().StringVar(&addArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
 	addCmd.Flags().DurationVar(&addArgs.interval, "interval", time.Minute, "sync interval")
+	addCmd.Flags().StringVar(&addArgs.sourceSecretName, "sourceSecretName", "sourcesecret", "Name of the source secret containing the credentials for the desctionation repository")
 	addCmd.Flags().StringVarP(&addArgs.username, "username", "u", "git", "basic authentication username")
 	addCmd.Flags().StringVarP(&addArgs.password, "password", "p", "", "basic authentication password")
+	addCmd.Flags().StringVar(&addArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
+	addCmd.Flags().BoolVar(&addArgs.tokenAuth, "token-auth", false, "when enabled, the personal access token will be used instead of SSH deploy key")
+	addCmd.Flags().Var(&addArgs.keyAlgorithm, "ssh-key-algorithm", addArgs.keyAlgorithm.Description())
+	addCmd.Flags().Var(&addArgs.keyRSABits, "ssh-rsa-bits", addArgs.keyRSABits.Description())
+	addCmd.Flags().Var(&addArgs.keyECDSACurve, "ssh-ecdsa-curve", addArgs.keyECDSACurve.Description())
+	addCmd.Flags().StringVar(&addArgs.sshHostname, "ssh-hostname", "", "SSH hostname, to be used when the SSH host differs from the HTTPS one")
+	addCmd.Flags().StringVar(&addArgs.caFile, "ca-file", "", "path to TLS CA file used for validating self-signed certificates")
 	addCmd.Flags().BoolVarP(&addArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
 
 	addCmd.Flags().StringVar(&addArgs.authorName, "author-name", "Lizz", "author name for Git commits")
@@ -74,8 +98,17 @@ func init() {
 }
 
 func addCmdRun(cmd *cobra.Command, args []string) error {
+	fmt.Println("destinationPrivate: ", addArgs.destinationPrivate)
+
 	logger.Actionf("Clone application repo.")
-	applicationRepo, err := repo.CloneApplicationRepo(addArgs.originUrl, addArgs.originBranch, addArgs.username, addArgs.password, rootArgs.timeout)
+	applicationRepo, err := repo.CloneApplicationRepo(
+		addArgs.originUrl,
+		addArgs.originBranch,
+		addArgs.username,
+		addArgs.password,
+		addArgs.privateKeyFile,
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -84,7 +117,14 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	logger.Actionf("Clone cluster repo.")
-	clusterRepo, err := repo.CloneClusterRepo(addArgs.fleetUrl, addArgs.fleetBranch, addArgs.username, addArgs.password, rootArgs.timeout)
+	clusterRepo, err := repo.CloneClusterRepo(
+		addArgs.fleetUrl,
+		addArgs.fleetBranch,
+		addArgs.username,
+		addArgs.password,
+		"",
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -97,7 +137,11 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	applicationRepo.Config().Repository = addArgs.originUrl
+	originUrl, err := config.UniversalURL(addArgs.originUrl)
+	if err != nil {
+		return err
+	}
+	applicationRepo.Config().Repository = originUrl
 	applicationRepo.Config().Sha = head
 	logger.Actionf("Check that the application can be installed.")
 	err = applicationRepo.Config().Check()
@@ -115,19 +159,72 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	logger.Actionf("Commit and push application repo.")
-	err = applicationRepo.CommitPush(addArgs.authorName, addArgs.authorEmail, "[add application] Create application repository for "+applicationRepo.Config().Name, addArgs.destinationUrl, rootArgs.timeout)
+	err = applicationRepo.CommitPush(
+		addArgs.authorName,
+		addArgs.authorEmail,
+		"[add application] Create application repository for "+applicationRepo.Config().Name,
+		addArgs.destinationUrl,
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
 	logger.Actionf("Add application to the cluster repo.")
-	err = clusterRepo.AddApplication(addArgs.destinationUrl, applicationRepo.Config(), addArgs.clusterRole, addArgs.destinationUrl, addArgs.decryptionSecret, addArgs.path)
+	publicKey, err := clusterRepo.AddApplication(
+		addArgs.destinationUrl,
+		addArgs.destinationPrivate,
+		applicationRepo.Config(),
+		addArgs.clusterRole,
+		addArgs.destinationUrl,
+		addArgs.decryptionSecret,
+		addArgs.path,
+		addArgs.sourceSecretName,
+		addArgs.username,
+		addArgs.password,
+		addArgs.tokenAuth,
+		addArgs.caFile,
+		addArgs.keyAlgorithm,
+		addArgs.keyRSABits,
+		addArgs.keyECDSACurve,
+		addArgs.sshHostname,
+		addArgs.privateKeyFile,
+	)
 	if err != nil {
 		return err
 	}
+	if addArgs.destinationPrivate == true {
+		ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
+		defer cancel()
+		err = promptPublicKey(ctx, publicKey)
+		if err != nil {
+			return err
+		}
+	}
 	logger.Actionf("Commit and push cluster repo.")
-	err = clusterRepo.CommitPush(addArgs.authorName, addArgs.authorEmail, "[add application] Add "+applicationRepo.Config().Name+" to the cluster", "", rootArgs.timeout)
+	err = clusterRepo.CommitPush(
+		addArgs.authorName,
+		addArgs.authorEmail,
+		"[add application] Add "+applicationRepo.Config().Name+" to the cluster",
+		"",
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func promptPublicKey(ctx context.Context, publicKey string) error {
+	logger.Successf("public key: %s", strings.TrimSpace(publicKey))
+	if !addArgs.silent {
+		prompt := promptui.Prompt{
+			Label:     "Please give the key access to your repository",
+			IsConfirm: true,
+		}
+		_, err := prompt.Run()
+		if err != nil {
+			return fmt.Errorf("aborting")
+		}
 	}
 	return nil
 }

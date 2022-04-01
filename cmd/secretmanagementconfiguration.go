@@ -39,6 +39,7 @@ type secretManagementConfigurationFlags struct {
 	interval         time.Duration
 	username         string
 	password         string
+	privateKeyFile   string
 	silent           bool
 
 	authorName  string
@@ -48,24 +49,44 @@ type secretManagementConfigurationFlags struct {
 var smcArgs secretManagementConfigurationFlags
 
 func init() {
-	secretManagementConfigurationCmd.Flags().StringVarP(&smcArgs.output, "ouput", "o", "sopsAgeSecret.yaml", "output where to save the secret to apply")
-	secretManagementConfigurationCmd.Flags().StringVar(&smcArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
-	secretManagementConfigurationCmd.Flags().StringVar(&smcArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
-	secretManagementConfigurationCmd.Flags().StringVar(&smcArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
-	secretManagementConfigurationCmd.Flags().StringVar(&smcArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
-	secretManagementConfigurationCmd.Flags().DurationVar(&smcArgs.interval, "interval", time.Minute, "sync interval")
-	secretManagementConfigurationCmd.Flags().StringVarP(&smcArgs.username, "username", "u", "git", "basic authentication username")
-	secretManagementConfigurationCmd.Flags().StringVarP(&smcArgs.password, "password", "p", "", "basic authentication password")
-	secretManagementConfigurationCmd.Flags().BoolVarP(&smcArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+	secretManagementConfigurationCmd.Flags().
+		StringVarP(&smcArgs.output, "ouput", "o", "sopsAgeSecret.yaml", "output where to save the secret to apply")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
+	secretManagementConfigurationCmd.Flags().
+		DurationVar(&smcArgs.interval, "interval", time.Minute, "sync interval")
+	secretManagementConfigurationCmd.Flags().
+		StringVarP(&smcArgs.username, "username", "u", "git", "basic authentication username")
+	secretManagementConfigurationCmd.Flags().
+		StringVarP(&smcArgs.password, "password", "p", "", "basic authentication password")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
+	secretManagementConfigurationCmd.Flags().
+		BoolVarP(&smcArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
 
-	secretManagementConfigurationCmd.Flags().StringVar(&smcArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	secretManagementConfigurationCmd.Flags().StringVar(&smcArgs.authorEmail, "author-email", "", "author email for Git commits")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	secretManagementConfigurationCmd.Flags().
+		StringVar(&smcArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(secretManagementConfigurationCmd)
 }
 
 func secretManagementConfigurationCmdRun(cmd *cobra.Command, args []string) error {
-	clusterRepo, err := repo.CloneClusterRepo(smcArgs.fleetUrl, smcArgs.fleetBranch, smcArgs.username, smcArgs.password, rootArgs.timeout)
+	clusterRepo, err := repo.CloneClusterRepo(
+		smcArgs.fleetUrl,
+		smcArgs.fleetBranch,
+		smcArgs.username,
+		smcArgs.password,
+		smcArgs.privateKeyFile,
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -73,11 +94,21 @@ func secretManagementConfigurationCmdRun(cmd *cobra.Command, args []string) erro
 	if err != nil {
 		return err
 	}
-	err = clusterRepo.ConfigureSecretManagement(smcArgs.decryptionSecret, smcArgs.output, smcArgs.path)
+	err = clusterRepo.ConfigureSecretManagement(
+		smcArgs.decryptionSecret,
+		smcArgs.output,
+		smcArgs.path,
+	)
 	if err != nil {
 		return err
 	}
-	err = clusterRepo.CommitPush(addArgs.authorName, addArgs.authorEmail, "[configure secret management] Configure secret management using sops and age", "", rootArgs.timeout)
+	err = clusterRepo.CommitPush(
+		addArgs.authorName,
+		addArgs.authorEmail,
+		"[configure secret management] Configure secret management using sops and age",
+		"",
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}

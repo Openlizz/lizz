@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func NewPatchYaml(namespace string, name string, path string, decryption bool) (string, error) {
+func NewPatchYaml(namespace string, name string, path string) (string, error) {
 	patchC := kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

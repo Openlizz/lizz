@@ -53,7 +53,9 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().DurationVar(&rootArgs.timeout, "timeout", 5*time.Minute, "timeout for this operation")
-	rootCmd.PersistentFlags().BoolVar(&rootArgs.verbose, "verbose", false, "print generated objects")
+	rootCmd.PersistentFlags().
+		DurationVar(&rootArgs.timeout, "timeout", 5*time.Minute, "timeout for this operation")
+	rootCmd.PersistentFlags().
+		BoolVar(&rootArgs.verbose, "verbose", false, "print generated objects")
 	rootCmd.SetOut(os.Stdout)
 }

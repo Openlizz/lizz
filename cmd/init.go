@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
@@ -36,6 +37,7 @@ type initFlags struct {
 	interval       time.Duration
 	username       string
 	password       string
+	privateKeyFile string
 	silent         bool
 
 	authorName  string
@@ -46,21 +48,36 @@ var initArgs initFlags
 
 func init() {
 	initCmd.Flags().StringVar(&initArgs.originUrl, "originUrl", "", "Git repository URL")
-	initCmd.Flags().StringVar(&initArgs.originBranch, "originBranch", "main", "Git branch of the repository")
+	initCmd.Flags().
+		StringVar(&initArgs.originBranch, "originBranch", "main", "Git branch of the repository")
 	initCmd.Flags().StringVar(&initArgs.destinationUrl, "destinationUrl", "", "Git repository URL")
 	initCmd.Flags().DurationVar(&initArgs.interval, "interval", time.Minute, "sync interval")
-	initCmd.Flags().StringVarP(&initArgs.username, "username", "u", "git", "basic authentication username")
-	initCmd.Flags().StringVarP(&initArgs.password, "password", "p", "", "basic authentication password")
-	initCmd.Flags().BoolVarP(&initArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+	initCmd.Flags().
+		StringVarP(&initArgs.username, "username", "u", "git", "basic authentication username")
+	initCmd.Flags().
+		StringVarP(&initArgs.password, "password", "p", "", "basic authentication password")
+	initCmd.Flags().
+		StringVar(&initArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
+	initCmd.Flags().
+		BoolVarP(&initArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
 
-	initCmd.Flags().StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	initCmd.Flags().StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
+	initCmd.Flags().
+		StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	initCmd.Flags().
+		StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(initCmd)
 }
 
 func initCmdRun(cmd *cobra.Command, args []string) error {
-	clusterRepo, err := repo.CloneClusterRepo(initArgs.originUrl, initArgs.originBranch, initArgs.username, initArgs.password, rootArgs.timeout)
+	clusterRepo, err := repo.CloneClusterRepo(
+		initArgs.originUrl,
+		initArgs.originBranch,
+		initArgs.username,
+		initArgs.password,
+		initArgs.privateKeyFile,
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -68,8 +85,18 @@ func initCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	clusterRepo.NewClusterConfig(initArgs.originUrl, head)
-	clusterRepo.CommitPush(initArgs.authorName, initArgs.authorEmail, "Initialize cluster repository", initArgs.destinationUrl, rootArgs.timeout)
+	originUrl, err := config.UniversalURL(initArgs.originUrl)
+	if err != nil {
+		return err
+	}
+	clusterRepo.NewClusterConfig(originUrl, head)
+	clusterRepo.CommitPush(
+		initArgs.authorName,
+		initArgs.authorEmail,
+		"Initialize cluster repository",
+		initArgs.destinationUrl,
+		rootArgs.timeout,
+	)
 	if err != nil {
 		return err
 	}

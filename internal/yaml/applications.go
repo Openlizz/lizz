@@ -30,7 +30,10 @@ func AddApplicationsYaml(path string, name string) (string, error) {
 		applicationsC = *applicationsCPtr
 	}
 	applicationsC.Resources = appendStringIfMissing(applicationsC.Resources, "./base/"+name)
-	applicationsC.PatchesStrategicMerge = appendStrategicMergeIfMissing(applicationsC.PatchesStrategicMerge, kustomizePatch.StrategicMerge(name+"-patch.yaml"))
+	applicationsC.PatchesStrategicMerge = appendStrategicMergeIfMissing(
+		applicationsC.PatchesStrategicMerge,
+		kustomizePatch.StrategicMerge(name+"-patch.yaml"),
+	)
 	applicationsY, err := exportKustomization(applicationsC)
 	if err != nil {
 		return "", err
@@ -59,7 +62,10 @@ func RemoveApplicationsYaml(path string, name string) (string, error) {
 		applicationsC = *applicationsCPtr
 	}
 	applicationsC.Resources = removeString(applicationsC.Resources, "./base/"+name)
-	applicationsC.PatchesStrategicMerge = removeStrategicMerge(applicationsC.PatchesStrategicMerge, name+"-patch.yaml")
+	applicationsC.PatchesStrategicMerge = removeStrategicMerge(
+		applicationsC.PatchesStrategicMerge,
+		name+"-patch.yaml",
+	)
 	applicationsY, err := exportKustomization(applicationsC)
 	if err != nil {
 		return "", err
@@ -77,7 +83,10 @@ func appendStringIfMissing(slice []string, elem string) []string {
 	return append(slice, elem)
 }
 
-func appendStrategicMergeIfMissing(slice []kustomizePatch.StrategicMerge, elem kustomizePatch.StrategicMerge) []kustomizePatch.StrategicMerge {
+func appendStrategicMergeIfMissing(
+	slice []kustomizePatch.StrategicMerge,
+	elem kustomizePatch.StrategicMerge,
+) []kustomizePatch.StrategicMerge {
 	for _, ele := range slice {
 		if ele == elem {
 			return slice
@@ -96,7 +105,10 @@ func removeString(slice []string, name string) []string {
 	return slice
 }
 
-func removeStrategicMerge(slice []kustomizePatch.StrategicMerge, name string) []kustomizePatch.StrategicMerge {
+func removeStrategicMerge(
+	slice []kustomizePatch.StrategicMerge,
+	name string,
+) []kustomizePatch.StrategicMerge {
 	for idx, str := range slice {
 		if str == kustomizePatch.StrategicMerge(name) {
 			slice[idx] = slice[len(slice)-1]

@@ -22,8 +22,15 @@ type ApplicationRepo struct {
 	git    *gogit.GoGit
 }
 
-func CloneApplicationRepo(URL string, branch string, username string, password string, timeout time.Duration) (*ApplicationRepo, error) {
-	git, err := Clone(URL, branch, username, password, timeout)
+func CloneApplicationRepo(
+	URL string,
+	branch string,
+	username string,
+	password string,
+	privateKeyFile string,
+	timeout time.Duration,
+) (*ApplicationRepo, error) {
+	git, err := Clone(URL, branch, username, password, privateKeyFile, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +58,10 @@ func (r *ApplicationRepo) OpenApplicationConfig() error {
 }
 
 func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *config.ClusterConfig) error {
-	c, err := config.RenderApplicationConfig(filepath.Join(r.git.Path(), "config.yaml"), clusterConfig)
+	c, err := config.RenderApplicationConfig(
+		filepath.Join(r.git.Path(), "config.yaml"),
+		clusterConfig,
+	)
 	if err != nil {
 		return err
 	}
@@ -59,7 +69,13 @@ func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *config.ClusterC
 	return nil
 }
 
-func (r *ApplicationRepo) CommitPush(authorName string, authorEmail string, message string, destinationUrl string, timeout time.Duration) error {
+func (r *ApplicationRepo) CommitPush(
+	authorName string,
+	authorEmail string,
+	message string,
+	destinationUrl string,
+	timeout time.Duration,
+) error {
 	return CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
 }
 
@@ -75,7 +91,13 @@ func (r *ApplicationRepo) Render() error {
 		tv[v.Name] = v.Value
 	}
 	for _, pwd := range r.config.Values.Passwords {
-		res, err := password.Generate(pwd.Lenght, pwd.NumDigits, pwd.NumSymbols, pwd.NoUpper, pwd.AllowRepeat)
+		res, err := password.Generate(
+			pwd.Lenght,
+			pwd.NumDigits,
+			pwd.NumSymbols,
+			pwd.NoUpper,
+			pwd.AllowRepeat,
+		)
 		if err != nil {
 			return err
 		}
@@ -119,7 +141,10 @@ func (r *ApplicationRepo) Render() error {
 		}
 		file, err := os.Create(path)
 		if err != nil {
-			return common.NewExitError(fmt.Sprintf("could not open in-place file for writing: %s", err), codes.CouldNotWriteOutputFile)
+			return common.NewExitError(
+				fmt.Sprintf("could not open in-place file for writing: %s", err),
+				codes.CouldNotWriteOutputFile,
+			)
 		}
 		defer file.Close()
 		_, err = file.Write(tpl.Bytes())
@@ -133,7 +158,10 @@ func (r *ApplicationRepo) Render() error {
 func (r *ApplicationRepo) Encrypt(clusterConfig *config.ClusterConfig) error {
 	if r.config.Encryption.Enabled == true {
 		for _, inputPath := range r.config.Encryption.InputPaths {
-			yamlE, err := yaml.EncryptYaml(filepath.Join(r.git.Path(), inputPath), clusterConfig.AgeKey)
+			yamlE, err := yaml.EncryptYaml(
+				filepath.Join(r.git.Path(), inputPath),
+				clusterConfig.AgeKey,
+			)
 			if err != nil {
 				return err
 			}
