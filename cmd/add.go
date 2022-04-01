@@ -75,7 +75,7 @@ func init() {
 	addCmd.Flags().StringVar(&addArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
 	addCmd.Flags().StringVar(&addArgs.path, "path", "./default", "path to kustomization in the application repository")
 	addCmd.Flags().StringVar(&addArgs.destinationUrl, "destinationUrl", "", "Git repository URL where to push the application repository")
-	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "destinationPrivate", true, "true if the destination repository is private and needs credentials")
+	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "destinationPrivate", false, "true if the destination repository is private and needs credentials")
 	addCmd.Flags().StringVar(&addArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
 	addCmd.Flags().StringVar(&addArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
 	addCmd.Flags().DurationVar(&addArgs.interval, "interval", time.Minute, "sync interval")
@@ -98,8 +98,6 @@ func init() {
 }
 
 func addCmdRun(cmd *cobra.Command, args []string) error {
-	fmt.Println("destinationPrivate: ", addArgs.destinationPrivate)
-
 	logger.Actionf("Clone application repo.")
 	applicationRepo, err := repo.CloneApplicationRepo(
 		addArgs.originUrl,
