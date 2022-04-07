@@ -38,7 +38,11 @@ func NewSyncYaml(
 	if sourceSecret == true {
 		secretRef = &meta.LocalObjectReference{Name: sourceSecretName}
 	} else {
-		secretRef = &meta.LocalObjectReference{}
+		secretRef = nil
+		if uURL.Scheme == "ssh" {
+			// if no secret specified then use https instead of ssh
+			URL = "https://" + uURL.Host + uURL.Path
+		}
 	}
 	gitRepositoryC := sourcev1.GitRepository{
 		ObjectMeta: metav1.ObjectMeta{
