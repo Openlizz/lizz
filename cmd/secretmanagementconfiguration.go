@@ -85,8 +85,8 @@ func secretManagementCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	err = clusterRepo.CommitPush(
-		addArgs.authorName,
-		addArgs.authorEmail,
+		secretManagementArgs.authorName,
+		secretManagementArgs.authorEmail,
 		"[configure secret management] Configure secret management using sops and age",
 		"",
 		rootArgs.timeout,

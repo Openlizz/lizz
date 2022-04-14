@@ -71,11 +71,11 @@ var addArgs addFlags
 func init() {
 	addCmd.Flags().StringVar(&addArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
 	addCmd.Flags().StringVar(&addArgs.originBranch, "origin-branch", "main", "Git branch of the application origin repository")
-	addCmd.Flags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "assumes the deploy key is already setup, skips confirmation (default false)")
+	addCmd.Flags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "assumes the deploy key is already setup, skips confirmation")
 	addCmd.Flags().StringVar(&addArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
 	addCmd.Flags().StringVar(&addArgs.path, "path", "./default", "path to kustomization in the application repository")
 	addCmd.Flags().StringVar(&addArgs.destinationUrl, "destination-url", "", "Git repository URL where to push the application repository")
-	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private (default true)")
+	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private")
 	addCmd.Flags().StringVar(&addArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
 	addCmd.Flags().StringVar(&addArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
 	addCmd.Flags().DurationVar(&addArgs.interval, "interval", time.Minute, "sync interval")
