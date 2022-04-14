@@ -16,8 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
@@ -33,11 +31,9 @@ type removeFlags struct {
 	applicationName string
 	fleetUrl        string
 	fleetBranch     string
-	interval        time.Duration
 	username        string
 	password        string
 	privateKeyFile  string
-	silent          bool
 
 	authorName  string
 	authorEmail string
@@ -46,26 +42,15 @@ type removeFlags struct {
 var removeArgs removeFlags
 
 func init() {
-	removeCmd.Flags().
-		StringVar(&removeArgs.applicationName, "applicationName", "", "Name of the application to remove")
-	removeCmd.Flags().
-		StringVar(&removeArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
-	removeCmd.Flags().
-		StringVar(&removeArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
-	removeCmd.Flags().DurationVar(&removeArgs.interval, "interval", time.Minute, "sync interval")
-	removeCmd.Flags().
-		StringVarP(&removeArgs.username, "username", "u", "git", "basic authentication username")
-	removeCmd.Flags().
-		StringVarP(&removeArgs.password, "password", "p", "", "basic authentication password")
-	removeCmd.Flags().
-		StringVar(&removeArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
-	removeCmd.Flags().
-		BoolVarP(&removeArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+	removeCmd.Flags().StringVar(&removeArgs.applicationName, "name", "", "Name of the application to remove")
+	removeCmd.Flags().StringVar(&removeArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
+	removeCmd.Flags().StringVar(&removeArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
+	removeCmd.Flags().StringVarP(&removeArgs.username, "username", "u", "git", "basic authentication username")
+	removeCmd.Flags().StringVarP(&removeArgs.password, "password", "p", "", "basic authentication password")
+	removeCmd.Flags().StringVar(&removeArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
-	removeCmd.Flags().
-		StringVar(&removeArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	removeCmd.Flags().
-		StringVar(&removeArgs.authorEmail, "author-email", "", "author email for Git commits")
+	removeCmd.Flags().StringVar(&removeArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	removeCmd.Flags().StringVar(&removeArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(removeCmd)
 }

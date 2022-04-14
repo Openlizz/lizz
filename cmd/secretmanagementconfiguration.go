@@ -16,75 +16,57 @@ limitations under the License.
 package cmd
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
-var secretManagementConfigurationCmd = &cobra.Command{
-	Use:   "secret-management-configuration",
+var secretManagementCmd = &cobra.Command{
+	Use:   "secret-management",
 	Short: "",
 	Long:  ``,
-	RunE:  secretManagementConfigurationCmdRun,
+	RunE:  secretManagementCmdRun,
 }
 
-type secretManagementConfigurationFlags struct {
+type secretManagementFlags struct {
 	output           string
 	path             string
 	decryptionSecret string
 	fleetUrl         string
 	fleetBranch      string
-	interval         time.Duration
 	username         string
 	password         string
 	privateKeyFile   string
-	silent           bool
 
 	authorName  string
 	authorEmail string
 }
 
-var smcArgs secretManagementConfigurationFlags
+var secretManagementArgs secretManagementFlags
 
 func init() {
-	secretManagementConfigurationCmd.Flags().
-		StringVarP(&smcArgs.output, "ouput", "o", "sopsAgeSecret.yaml", "output where to save the secret to apply")
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
-	secretManagementConfigurationCmd.Flags().
-		DurationVar(&smcArgs.interval, "interval", time.Minute, "sync interval")
-	secretManagementConfigurationCmd.Flags().
-		StringVarP(&smcArgs.username, "username", "u", "git", "basic authentication username")
-	secretManagementConfigurationCmd.Flags().
-		StringVarP(&smcArgs.password, "password", "p", "", "basic authentication password")
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
-	secretManagementConfigurationCmd.Flags().
-		BoolVarP(&smcArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+	secretManagementCmd.Flags().StringVarP(&secretManagementArgs.output, "ouput", "o", "sopsAgeSecret.yaml", "output where to save the secret to apply")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
+	secretManagementCmd.Flags().StringVarP(&secretManagementArgs.username, "username", "u", "git", "basic authentication username")
+	secretManagementCmd.Flags().StringVarP(&secretManagementArgs.password, "password", "p", "", "basic authentication password")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	secretManagementConfigurationCmd.Flags().
-		StringVar(&smcArgs.authorEmail, "author-email", "", "author email for Git commits")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	secretManagementCmd.Flags().StringVar(&secretManagementArgs.authorEmail, "author-email", "", "author email for Git commits")
 
-	rootCmd.AddCommand(secretManagementConfigurationCmd)
+	rootCmd.AddCommand(secretManagementCmd)
 }
 
-func secretManagementConfigurationCmdRun(cmd *cobra.Command, args []string) error {
+func secretManagementCmdRun(cmd *cobra.Command, args []string) error {
 	clusterRepo, err := repo.CloneClusterRepo(
-		smcArgs.fleetUrl,
-		smcArgs.fleetBranch,
-		smcArgs.username,
-		smcArgs.password,
-		smcArgs.privateKeyFile,
+		secretManagementArgs.fleetUrl,
+		secretManagementArgs.fleetBranch,
+		secretManagementArgs.username,
+		secretManagementArgs.password,
+		secretManagementArgs.privateKeyFile,
 		rootArgs.timeout,
 	)
 	if err != nil {
@@ -95,9 +77,9 @@ func secretManagementConfigurationCmdRun(cmd *cobra.Command, args []string) erro
 		return err
 	}
 	err = clusterRepo.ConfigureSecretManagement(
-		smcArgs.decryptionSecret,
-		smcArgs.output,
-		smcArgs.path,
+		secretManagementArgs.decryptionSecret,
+		secretManagementArgs.output,
+		secretManagementArgs.path,
 	)
 	if err != nil {
 		return err

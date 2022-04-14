@@ -16,8 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/repo"
@@ -34,11 +32,9 @@ type initFlags struct {
 	originUrl      string
 	originBranch   string
 	destinationUrl string
-	interval       time.Duration
 	username       string
 	password       string
 	privateKeyFile string
-	silent         bool
 
 	authorName  string
 	authorEmail string
@@ -47,24 +43,15 @@ type initFlags struct {
 var initArgs initFlags
 
 func init() {
-	initCmd.Flags().StringVar(&initArgs.originUrl, "originUrl", "", "Git repository URL")
-	initCmd.Flags().
-		StringVar(&initArgs.originBranch, "originBranch", "main", "Git branch of the repository")
-	initCmd.Flags().StringVar(&initArgs.destinationUrl, "destinationUrl", "", "Git repository URL")
-	initCmd.Flags().DurationVar(&initArgs.interval, "interval", time.Minute, "sync interval")
-	initCmd.Flags().
-		StringVarP(&initArgs.username, "username", "u", "git", "basic authentication username")
-	initCmd.Flags().
-		StringVarP(&initArgs.password, "password", "p", "", "basic authentication password")
-	initCmd.Flags().
-		StringVar(&initArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
-	initCmd.Flags().
-		BoolVarP(&initArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
+	initCmd.Flags().StringVar(&initArgs.originUrl, "origin-url", "", "Git repository URL")
+	initCmd.Flags().StringVar(&initArgs.originBranch, "origin-branch", "main", "Git branch of the repository")
+	initCmd.Flags().StringVar(&initArgs.destinationUrl, "destination-url", "", "Git repository URL")
+	initCmd.Flags().StringVarP(&initArgs.username, "username", "u", "git", "basic authentication username")
+	initCmd.Flags().StringVarP(&initArgs.password, "password", "p", "", "basic authentication password")
+	initCmd.Flags().StringVar(&initArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
-	initCmd.Flags().
-		StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	initCmd.Flags().
-		StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
+	initCmd.Flags().StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	initCmd.Flags().StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(initCmd)
 }

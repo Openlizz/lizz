@@ -69,17 +69,17 @@ type addFlags struct {
 var addArgs addFlags
 
 func init() {
-	addCmd.Flags().StringVar(&addArgs.originUrl, "originUrl", "", "Git repository URL where the application is located")
-	addCmd.Flags().StringVar(&addArgs.originBranch, "originBranch", "main", "Git branch of the application origin repository")
-	addCmd.Flags().BoolVar(&addArgs.clusterRole, "clusterRole", false, "assumes the deploy key is already setup, skips confirmation")
-	addCmd.Flags().StringVar(&addArgs.decryptionSecret, "decryptionSecret", "sops-age", "name of the secret containing the AGE secret key")
+	addCmd.Flags().StringVar(&addArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
+	addCmd.Flags().StringVar(&addArgs.originBranch, "origin-branch", "main", "Git branch of the application origin repository")
+	addCmd.Flags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "assumes the deploy key is already setup, skips confirmation (default false)")
+	addCmd.Flags().StringVar(&addArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
 	addCmd.Flags().StringVar(&addArgs.path, "path", "./default", "path to kustomization in the application repository")
-	addCmd.Flags().StringVar(&addArgs.destinationUrl, "destinationUrl", "", "Git repository URL where to push the application repository")
-	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "destinationPrivate", false, "true if the destination repository is private and needs credentials")
-	addCmd.Flags().StringVar(&addArgs.fleetUrl, "fleetUrl", "", "Git repository URL of the fleet repository")
-	addCmd.Flags().StringVar(&addArgs.fleetBranch, "fleetBranch", "main", "Git branch of the fleet repository")
+	addCmd.Flags().StringVar(&addArgs.destinationUrl, "destination-url", "", "Git repository URL where to push the application repository")
+	addCmd.Flags().BoolVar(&addArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private (default true)")
+	addCmd.Flags().StringVar(&addArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
+	addCmd.Flags().StringVar(&addArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
 	addCmd.Flags().DurationVar(&addArgs.interval, "interval", time.Minute, "sync interval")
-	addCmd.Flags().StringVar(&addArgs.sourceSecretName, "sourceSecretName", "sourcesecret", "Name of the source secret containing the credentials for the desctionation repository")
+	addCmd.Flags().StringVar(&addArgs.sourceSecretName, "sourcesecret-name", "sourcesecret", "Name of the source secret containing the credentials for the desctionation repository")
 	addCmd.Flags().StringVarP(&addArgs.username, "username", "u", "git", "basic authentication username")
 	addCmd.Flags().StringVarP(&addArgs.password, "password", "p", "", "basic authentication password")
 	addCmd.Flags().StringVar(&addArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
@@ -98,7 +98,7 @@ func init() {
 }
 
 func addCmdRun(cmd *cobra.Command, args []string) error {
-	logger.Actionf("Clone application repo.")
+	logger.Actionf("Clone application repository.")
 	applicationRepo, err := repo.CloneApplicationRepo(
 		addArgs.originUrl,
 		addArgs.originBranch,
@@ -114,7 +114,7 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logger.Actionf("Clone cluster repo.")
+	logger.Actionf("Clone cluster repository.")
 	clusterRepo, err := repo.CloneClusterRepo(
 		addArgs.fleetUrl,
 		addArgs.fleetBranch,
@@ -156,7 +156,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logger.Actionf("Commit and push application repo.")
+	logger.Actionf("Commit and push application repository.")
+	// > create the repository if does not exists
 	err = applicationRepo.CommitPush(
 		addArgs.authorName,
 		addArgs.authorEmail,
@@ -167,7 +168,8 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logger.Actionf("Add application to the cluster repo.")
+	logger.Actionf("Add application to the cluster repository.")
+	// > use gitlab_token as sourcesecret if private
 	publicKey, err := clusterRepo.AddApplication(
 		addArgs.destinationUrl,
 		addArgs.destinationPrivate,
@@ -198,7 +200,7 @@ func addCmdRun(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	logger.Actionf("Commit and push cluster repo.")
+	logger.Actionf("Commit and push cluster repository.")
 	err = clusterRepo.CommitPush(
 		addArgs.authorName,
 		addArgs.authorEmail,
