@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"gitlab.com/openlizz/lizz/internal/git"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
+	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"gitlab.com/openlizz/lizz/internal/provider"
 )
 
@@ -59,7 +60,11 @@ type CloneOptions struct {
 	Provider       gitprovider.Client
 }
 
-func Create(options *CreateOptions) (string, gitprovider.UserRepository, error) {
+func Create(options *CreateOptions, status *cli.Status) (string, gitprovider.UserRepository, error) {
+	if status != nil {
+		status.Start("Create new repository ")
+		defer status.End(false)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), options.Timeout)
 	defer cancel()
 	var repo gitprovider.UserRepository
@@ -78,6 +83,9 @@ func Create(options *CreateOptions) (string, gitprovider.UserRepository, error) 
 	URL, err := getCloneURL(repo, gitprovider.TransportType(options.TransportType), options.SshHostname)
 	if err != nil {
 		return "", nil, err
+	}
+	if status != nil {
+		status.End(true)
 	}
 	return URL, repo, nil
 }
@@ -106,7 +114,7 @@ func Clone(options *CloneOptions) (*gogit.GoGit, error) {
 			SshHostname:    options.SshHostname,
 			Provider:       options.Provider,
 		}
-		URL, _, err := Create(createOptions)
+		URL, _, err := Create(createOptions, nil)
 		if err != nil {
 			return nil, err
 		}

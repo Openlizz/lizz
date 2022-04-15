@@ -57,6 +57,8 @@ func init() {
 }
 
 func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
+	logger.V(0).Infof("Initialize the cluster repository...")
+
 	glToken := os.Getenv(glTokenEnvVar)
 	if glToken == "" {
 		var err error
@@ -103,7 +105,6 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger.Actionf("Clone the origin repository.")
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			URL:      initArgs.originUrl,
@@ -113,11 +114,11 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Timeout:  rootArgs.timeout,
 			CaBundle: caBundle,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	head, err := clusterRepo.Git().Head()
 	if err != nil {
 		return err
@@ -126,8 +127,7 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	clusterRepo.NewClusterConfig(originUrl, head)
-	logger.Actionf("Create the destination repository.")
+	clusterRepo.NewClusterConfig(originUrl, head, status)
 	destinationUrl, _, err := repo.Create(&repo.CreateOptions{
 		RepositoryName: initGitlabArgs.destination,
 		Owner:          initGitlabArgs.owner,
@@ -139,12 +139,10 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Teams:          mapTeamSlice(initGitlabArgs.teams, glDefaultPermission),
 		SshHostname:    addArgs.sshHostname,
 		Provider:       providerClient,
-	})
+	}, status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("%s repository created.", destinationUrl)
-	logger.Actionf("Commit and push to the destination repository.")
 	clusterRepo.Git().SetAuth(initGitlabArgs.owner, glToken)
 	clusterRepo.CommitPush(
 		initArgs.authorName,
@@ -152,10 +150,10 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		"Initialize cluster repository",
 		destinationUrl,
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	return nil
 }

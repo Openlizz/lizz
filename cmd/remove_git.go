@@ -46,7 +46,8 @@ func init() {
 }
 
 func removeGitCmdRun(cmd *cobra.Command, args []string) error {
-	logger.Actionf("Clone the fleet repository.")
+	logger.V(0).Infof("Remove application...")
+
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			URL:            removeGitArgs.fleetUrl,
@@ -56,32 +57,29 @@ func removeGitCmdRun(cmd *cobra.Command, args []string) error {
 			PrivateKeyFile: removeGitArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Remove the application.")
-	err = clusterRepo.OpenClusterConfig()
+	err = clusterRepo.OpenClusterConfig(status)
 	if err != nil {
 		return err
 	}
-	err = clusterRepo.RemoveApplication(removeArgs.applicationName)
+	err = clusterRepo.RemoveApplication(removeArgs.applicationName, status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Commit and push to the fleet repository.")
 	err = clusterRepo.CommitPush(
 		removeArgs.authorName,
 		removeArgs.authorEmail,
 		"[remove application] Remove "+removeArgs.applicationName+" from the cluster",
 		"",
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	return nil
 }

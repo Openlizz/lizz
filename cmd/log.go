@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Flux authors
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,34 +17,31 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
 	"io"
+	"os"
+
+	"sigs.k8s.io/kind/pkg/log"
+
+	"gitlab.com/openlizz/lizz/internal/logger/cli"
+	"gitlab.com/openlizz/lizz/internal/logger/env"
 )
 
-type stderrLogger struct {
-	stderr io.Writer
+// NewLogger returns the standard logger used by the kind CLI
+// This logger writes to os.Stderr
+func NewLogger() log.Logger {
+	var writer io.Writer = os.Stderr
+	if env.IsSmartTerminal(writer) {
+		writer = cli.NewSpinner(writer)
+	}
+	return cli.NewLogger(writer, 0)
 }
 
-func (l stderrLogger) Actionf(format string, a ...interface{}) {
-	fmt.Fprintln(l.stderr, `👉`, fmt.Sprintf(format, a...))
-}
-
-func (l stderrLogger) Generatef(format string, a ...interface{}) {
-	fmt.Fprintln(l.stderr, `➕`, fmt.Sprintf(format, a...))
-}
-
-func (l stderrLogger) Waitingf(format string, a ...interface{}) {
-	fmt.Fprintln(l.stderr, `⏳`, fmt.Sprintf(format, a...))
-}
-
-func (l stderrLogger) Successf(format string, a ...interface{}) {
-	fmt.Fprintln(l.stderr, `✅`, fmt.Sprintf(format, a...))
-}
-
-func (l stderrLogger) Warningf(format string, a ...interface{}) {
-	fmt.Fprintln(l.stderr, `❗`, fmt.Sprintf(format, a...))
-}
-
-func (l stderrLogger) Failuref(format string, a ...interface{}) {
-	fmt.Fprintln(l.stderr, `❌`, fmt.Sprintf(format, a...))
+// ColorEnabled returns true if color is enabled for the logger
+// this should be used to control output
+func ColorEnabled(logger log.Logger) bool {
+	type maybeColorer interface {
+		ColorEnabled() bool
+	}
+	v, ok := logger.(maybeColorer)
+	return ok && v.ColorEnabled()
 }

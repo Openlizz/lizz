@@ -56,6 +56,8 @@ func init() {
 }
 
 func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
+	logger.V(0).Infof("Remove application...")
+
 	glToken := os.Getenv(glTokenEnvVar)
 	if glToken == "" {
 		var err error
@@ -92,7 +94,6 @@ func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger.Actionf("Clone the fleet repository.")
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			RepositoryName: removeGitlabArgs.fleet,
@@ -106,32 +107,29 @@ func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Teams:          mapTeamSlice(removeGitlabArgs.teams, glDefaultPermission),
 			Provider:       providerClient,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Remove the application.")
-	err = clusterRepo.OpenClusterConfig()
+	err = clusterRepo.OpenClusterConfig(status)
 	if err != nil {
 		return err
 	}
-	err = clusterRepo.RemoveApplication(removeArgs.applicationName)
+	err = clusterRepo.RemoveApplication(removeArgs.applicationName, status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Commit and push to the fleet repository.")
 	err = clusterRepo.CommitPush(
 		removeArgs.authorName,
 		removeArgs.authorEmail,
 		"[remove application] Remove "+removeArgs.applicationName+" from the cluster",
 		"",
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	return nil
 }

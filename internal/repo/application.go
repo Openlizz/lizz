@@ -12,6 +12,7 @@ import (
 	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
+	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"gitlab.com/openlizz/lizz/internal/yaml"
 	"go.mozilla.org/sops/cmd/sops/codes"
 	"go.mozilla.org/sops/v3/cmd/sops/common"
@@ -22,11 +23,14 @@ type ApplicationRepo struct {
 	git    *gogit.GoGit
 }
 
-func CloneApplicationRepo(options *CloneOptions) (*ApplicationRepo, error) {
+func CloneApplicationRepo(options *CloneOptions, status *cli.Status) (*ApplicationRepo, error) {
+	status.Start("Clone the application repository ")
+	defer status.End(false)
 	git, err := Clone(options)
 	if err != nil {
 		return nil, err
 	}
+	status.End(true)
 	return &ApplicationRepo{
 		config: &config.ApplicationConfig{},
 		git:    git,
@@ -50,7 +54,9 @@ func (r *ApplicationRepo) OpenApplicationConfig() error {
 	return nil
 }
 
-func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *config.ClusterConfig) error {
+func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *config.ClusterConfig, status *cli.Status) error {
+	status.Start("Render the application configuration ")
+	defer status.End(false)
 	c, err := config.RenderApplicationConfig(
 		filepath.Join(r.git.Path(), "config.yaml"),
 		clusterConfig,
@@ -59,6 +65,7 @@ func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *config.ClusterC
 		return err
 	}
 	r.config = c
+	status.End(true)
 	return nil
 }
 
@@ -68,11 +75,21 @@ func (r *ApplicationRepo) CommitPush(
 	message string,
 	destinationUrl string,
 	timeout time.Duration,
+	status *cli.Status,
 ) error {
-	return CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
+	status.Start("Commit and push to the application repository ")
+	defer status.End(false)
+	err := CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
+	if err != nil {
+		return err
+	}
+	status.End(true)
+	return nil
 }
 
-func (r *ApplicationRepo) Render() error {
+func (r *ApplicationRepo) Render(status *cli.Status) error {
+	status.Start("Render the application values ")
+	defer status.End(false)
 	tv := make(map[string]interface{})
 	for _, v := range r.config.Values.ApplicationDependencies {
 		tv[v.Name] = v.Value
@@ -145,10 +162,13 @@ func (r *ApplicationRepo) Render() error {
 			return err
 		}
 	}
+	status.End(true)
 	return nil
 }
 
-func (r *ApplicationRepo) Encrypt(clusterConfig *config.ClusterConfig) error {
+func (r *ApplicationRepo) Encrypt(clusterConfig *config.ClusterConfig, status *cli.Status) error {
+	status.Start("Encrypt the application files ")
+	defer status.End(false)
 	if r.config.Encryption.Enabled == true {
 		for _, inputPath := range r.config.Encryption.InputPaths {
 			yamlE, err := yaml.EncryptYaml(
@@ -164,5 +184,6 @@ func (r *ApplicationRepo) Encrypt(clusterConfig *config.ClusterConfig) error {
 			}
 		}
 	}
+	status.End(true)
 	return nil
 }

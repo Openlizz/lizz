@@ -47,7 +47,8 @@ func init() {
 }
 
 func initGitCmdRun(cmd *cobra.Command, args []string) error {
-	logger.Actionf("Clone the origin repository.")
+	logger.V(0).Infof("Initialize the cluster repository...")
+
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			URL:            initArgs.originUrl,
@@ -57,11 +58,11 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 			PrivateKeyFile: initGitArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	head, err := clusterRepo.Git().Head()
 	if err != nil {
 		return err
@@ -70,18 +71,20 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	clusterRepo.NewClusterConfig(originUrl, head)
-	logger.Actionf("Commit and push to the destination repository.")
+	err = clusterRepo.NewClusterConfig(originUrl, head, status)
+	if err != nil {
+		return err
+	}
 	clusterRepo.CommitPush(
 		initArgs.authorName,
 		initArgs.authorEmail,
 		"Initialize cluster repository",
 		initGitArgs.destinationUrl,
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	return nil
 }
