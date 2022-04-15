@@ -57,6 +57,8 @@ func init() {
 }
 
 func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
+	logger.V(0).Infof("Configure secret management...")
+
 	glToken := os.Getenv(glTokenEnvVar)
 	if glToken == "" {
 		var err error
@@ -93,7 +95,6 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger.Actionf("Clone the fleet repository.")
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			RepositoryName: secretManagementGitlabArgs.fleet,
@@ -107,13 +108,12 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Teams:          mapTeamSlice(secretManagementGitlabArgs.teams, glDefaultPermission),
 			Provider:       providerClient,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Configure the secret management.")
-	err = clusterRepo.OpenClusterConfig()
+	err = clusterRepo.OpenClusterConfig(status)
 	if err != nil {
 		return err
 	}
@@ -121,22 +121,22 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		secretManagementArgs.decryptionSecret,
 		secretManagementArgs.output,
 		secretManagementArgs.path,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Commit and push to the fleet repository.")
 	err = clusterRepo.CommitPush(
 		secretManagementArgs.authorName,
 		secretManagementArgs.authorEmail,
 		"[configure secret management] Configure secret management using sops and age",
 		"",
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
+	logger.V(0).Infof("Run `kubectl apply -f %s` to apply the secret to the cluster", secretManagementArgs.output)
 	return nil
 }

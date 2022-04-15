@@ -47,7 +47,8 @@ func init() {
 }
 
 func secretManagementGitCmdRun(cmd *cobra.Command, args []string) error {
-	logger.Actionf("Clone the fleet repository.")
+	logger.V(0).Infof("Configure secret management...")
+
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			URL:            secretManagementGitArgs.fleetUrl,
@@ -57,13 +58,12 @@ func secretManagementGitCmdRun(cmd *cobra.Command, args []string) error {
 			PrivateKeyFile: secretManagementGitArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Configure the secret management.")
-	err = clusterRepo.OpenClusterConfig()
+	err = clusterRepo.OpenClusterConfig(status)
 	if err != nil {
 		return err
 	}
@@ -71,22 +71,22 @@ func secretManagementGitCmdRun(cmd *cobra.Command, args []string) error {
 		secretManagementArgs.decryptionSecret,
 		secretManagementArgs.output,
 		secretManagementArgs.path,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Commit and push to the fleet repository.")
 	err = clusterRepo.CommitPush(
 		secretManagementArgs.authorName,
 		secretManagementArgs.authorEmail,
 		"[configure secret management] Configure secret management using sops and age",
 		"",
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
+	logger.V(0).Infof("Run `kubectl apply -f %s` to apply the secret to the cluster", secretManagementArgs.output)
 	return nil
 }

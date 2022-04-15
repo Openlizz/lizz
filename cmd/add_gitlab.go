@@ -75,6 +75,8 @@ func init() {
 }
 
 func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
+	logger.V(0).Infof("Add new application...")
+
 	glToken := os.Getenv(glTokenEnvVar)
 	if glToken == "" {
 		var err error
@@ -130,7 +132,6 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger.Actionf("Clone application repository.")
 	applicationRepo, err := repo.CloneApplicationRepo(
 		&repo.CloneOptions{
 			URL:      addArgs.originUrl,
@@ -140,6 +141,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Timeout:  rootArgs.timeout,
 			CaBundle: caBundle,
 		},
+		status,
 	)
 	if err != nil {
 		return err
@@ -148,8 +150,6 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Clone cluster repository.")
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			RepositoryName: addGitlabArgs.fleet,
@@ -165,46 +165,37 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			SshHostname:    addArgs.sshHostname,
 			Provider:       providerClient,
 		},
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	err = clusterRepo.OpenClusterConfig()
+	err = clusterRepo.OpenClusterConfig(status)
 	if err != nil {
 		return err
 	}
-	logger.Actionf("Render application configuration.")
-	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config())
+	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	originUrl, err := config.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err
 	}
 	applicationRepo.Config().Repository = originUrl
 	applicationRepo.Config().Sha = head
-	logger.Actionf("Check that the application can be installed.")
-	err = applicationRepo.Config().Check()
+	err = applicationRepo.Config().Check(status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Render application values.")
-	err = applicationRepo.Render()
+	err = applicationRepo.Render(status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Encrypt application files.")
-	err = applicationRepo.Encrypt(clusterRepo.Config())
+	err = applicationRepo.Encrypt(clusterRepo.Config(), status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Create the application repository.")
 	transportType := "ssh"
 	if addArgs.tokenAuth == true {
 		transportType = "https"
@@ -220,12 +211,10 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Teams:          mapTeamSlice(addGitlabArgs.teams, glDefaultPermission),
 		SshHostname:    addArgs.sshHostname,
 		Provider:       providerClient,
-	})
+	}, status)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Commit and push application repository.")
 	applicationRepo.Git().SetAuth(addGitlabArgs.owner, glToken)
 	err = applicationRepo.CommitPush(
 		addArgs.authorName,
@@ -233,12 +222,11 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		"[add application] Create application repository for "+applicationRepo.Config().Name,
 		destinationUrl,
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
-	logger.Actionf("Add application to the cluster repository.")
 	publicKey, err := clusterRepo.AddApplication(
 		destinationUrl,
 		addArgs.destinationPrivate,
@@ -260,6 +248,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			SshHostname:   addArgs.sshHostname,
 			PlainProvider: false,
 		},
+		status,
 	)
 	if err != nil {
 		return err
@@ -272,18 +261,17 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	logger.Actionf("Commit and push cluster repository.")
 	err = clusterRepo.CommitPush(
 		addArgs.authorName,
 		addArgs.authorEmail,
 		"[add application] Add "+applicationRepo.Config().Name+" to the cluster",
 		"",
 		rootArgs.timeout,
+		status,
 	)
 	if err != nil {
 		return err
 	}
-	logger.Successf("")
 	return nil
 }
 
@@ -291,7 +279,7 @@ func reconcileDeployKey(ctx context.Context, publicKey string, repository gitpro
 	if repository == nil {
 		return errors.New("repository is required")
 	}
-	logger.Successf("public key: %s", strings.TrimSpace(publicKey))
+	logger.V(0).Infof("public key: %s", strings.TrimSpace(publicKey))
 
 	name := deployKeyName(addArgs.sourceSecretName, addArgs.destinationBranch, addGitlabArgs.destination)
 	deployKeyInfo := newDeployKeyInfo(name, publicKey, addGitlabArgs.readWriteKey)
@@ -301,7 +289,7 @@ func reconcileDeployKey(ctx context.Context, publicKey string, repository gitpro
 		return err
 	}
 	if changed {
-		logger.Successf("configured deploy key %q for %q", deployKeyInfo.Name, repository.Repository().String())
+		logger.V(0).Infof("configured deploy key %q for %q", deployKeyInfo.Name, repository.Repository().String())
 	}
 	return nil
 }

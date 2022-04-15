@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/openlizz/lizz/internal/logger/cli"
 )
 
 var VERSION = "0.0.0-dev.0"
@@ -34,7 +35,8 @@ var rootCmd = &cobra.Command{
 	Long:          ``,
 }
 
-var logger = stderrLogger{stderr: os.Stderr}
+var logger = NewLogger()
+var status = cli.StatusForLogger(logger)
 
 type rootFlags struct {
 	timeout time.Duration
@@ -47,7 +49,7 @@ func Execute() {
 	log.SetFlags(0)
 	err := rootCmd.Execute()
 	if err != nil {
-		logger.Failuref("%v", err)
+		logger.Errorf("%v", err)
 		os.Exit(1)
 	}
 }

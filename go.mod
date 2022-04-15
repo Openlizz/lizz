@@ -198,6 +198,7 @@ require (
 	sigs.k8s.io/cli-utils v0.29.3 // indirect
 	sigs.k8s.io/controller-runtime v0.11.1 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
+	sigs.k8s.io/kind v0.12.0 // indirect
 	sigs.k8s.io/kustomize v2.0.3+incompatible // indirect
 	sigs.k8s.io/kustomize/api v0.11.2 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.3 // indirect

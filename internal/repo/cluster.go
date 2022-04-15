@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
+	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"gitlab.com/openlizz/lizz/internal/yaml"
 	yml "sigs.k8s.io/yaml"
 )
@@ -20,11 +21,14 @@ type ClusterRepo struct {
 	git    *gogit.GoGit
 }
 
-func CloneClusterRepo(options *CloneOptions) (*ClusterRepo, error) {
+func CloneClusterRepo(options *CloneOptions, status *cli.Status) (*ClusterRepo, error) {
+	status.Start("Clone the cluster repository ")
+	defer status.End(false)
 	git, err := Clone(options)
 	if err != nil {
 		return nil, err
 	}
+	status.End(true)
 	return &ClusterRepo{
 		config: &config.ClusterConfig{},
 		git:    git,
@@ -39,19 +43,33 @@ func (r *ClusterRepo) Git() *gogit.GoGit {
 	return r.git
 }
 
-func (r *ClusterRepo) NewClusterConfig(repository string, sha string) error {
+func (r *ClusterRepo) NewClusterConfig(repository string, sha string, status *cli.Status) error {
+	status.Start("Create a new configuration for the cluster")
+	defer status.End(false)
 	c := config.NewClusterConfig(repository, sha)
 	r.config = c
-	return r.SaveClusterConfig()
+	err := r.SaveClusterConfig()
+	if err != nil {
+		return err
+	}
+	status.End(true)
+	return nil
 }
 
-func (r *ClusterRepo) OpenClusterConfig() error {
+func (r *ClusterRepo) OpenClusterConfig(status *cli.Status) error {
+	status.Start("Open and read the cluster configuration file")
+	defer status.End(false)
 	c, err := config.OpenClusterConfig(filepath.Join(r.git.Path(), "config.yaml"))
 	if err != nil {
 		return err
 	}
 	r.config = c
-	return r.SaveClusterConfig()
+	err = r.SaveClusterConfig()
+	if err != nil {
+		return err
+	}
+	status.End(true)
+	return nil
 }
 
 func (r *ClusterRepo) SaveClusterConfig() error {
@@ -66,7 +84,9 @@ func (r *ClusterRepo) SaveClusterConfig() error {
 	return nil
 }
 
-func (r *ClusterRepo) ConfigureSecretManagement(secretName string, output string, path string) error {
+func (r *ClusterRepo) ConfigureSecretManagement(secretName string, output string, path string, status *cli.Status) error {
+	status.Start("Configure the secret management")
+	defer status.End(false)
 	secretY, k, err := yaml.NewSecretSopsYaml(secretName)
 	if err != nil {
 		return err
@@ -99,6 +119,7 @@ func (r *ClusterRepo) ConfigureSecretManagement(secretName string, output string
 	if err != nil {
 		return err
 	}
+	status.End(true)
 	return nil
 }
 
@@ -110,7 +131,10 @@ func (r *ClusterRepo) AddApplication(
 	decryptionSecret string,
 	path string,
 	sourceSecretOptions *yaml.SourceSecretOptions,
+	status *cli.Status,
 ) (string, error) {
+	status.Start("Add the application to the cluster repository ")
+	defer status.End(false)
 	repository, err := config.UniversalURL(URL)
 	if err != nil {
 		return "", err
@@ -276,10 +300,13 @@ func (r *ClusterRepo) AddApplication(
 	if err != nil {
 		return "", err
 	}
+	status.End(true)
 	return publicKey, nil
 }
 
-func (r *ClusterRepo) RemoveApplication(name string) error {
+func (r *ClusterRepo) RemoveApplication(name string, status *cli.Status) error {
+	status.Start("Remove the application from the cluster")
+	defer status.End(false)
 	r.config.RemoveApplication(name)
 	err := r.config.Save(filepath.Join(r.git.Path(), "config.yaml"))
 	if err != nil {
@@ -321,6 +348,7 @@ func (r *ClusterRepo) RemoveApplication(name string) error {
 	if err != nil {
 		return err
 	}
+	status.End(true)
 	return nil
 }
 
@@ -330,6 +358,14 @@ func (r *ClusterRepo) CommitPush(
 	message string,
 	destinationUrl string,
 	timeout time.Duration,
+	status *cli.Status,
 ) error {
-	return CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
+	status.Start("Commit and push to the cluster repository ")
+	defer status.End(false)
+	err := CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
+	if err != nil {
+		return err
+	}
+	status.End(true)
+	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/fluxcd/pkg/apis/meta"
+	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"sigs.k8s.io/yaml"
 )
 
@@ -153,12 +154,15 @@ func RenderApplicationConfig(
 	return c, nil
 }
 
-func (c *ApplicationConfig) Check() error {
+func (c *ApplicationConfig) Check(status *cli.Status) error {
+	status.Start("Check that the application can be installed ")
+	defer status.End(false)
 	for idx, d := range c.Dependencies {
 		if d == false {
 			return fmt.Errorf("dependency number %d of the application is not fulfilled", idx)
 		}
 	}
+	status.End(true)
 	return nil
 }
 
