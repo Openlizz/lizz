@@ -47,7 +47,6 @@ const (
 )
 
 type addGitlabFlags struct {
-	originUrl    string
 	owner        string
 	fleet        string
 	destination  string
@@ -62,7 +61,6 @@ type addGitlabFlags struct {
 var addGitlabArgs addGitlabFlags
 
 func init() {
-	addGitlabCmd.Flags().StringVar(&addGitlabArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
 	addGitlabCmd.Flags().StringVar(&addGitlabArgs.owner, "owner", "", "GitLab user or group name")
 	addGitlabCmd.Flags().StringVar(&addGitlabArgs.fleet, "fleet", "", "GitLab repository name of the fleet repository")
 	addGitlabCmd.Flags().StringVar(&addGitlabArgs.destination, "destination", "", "GitLab repository name where to push the application repository")
@@ -135,7 +133,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	logger.Actionf("Clone application repository.")
 	applicationRepo, err := repo.CloneApplicationRepo(
 		&repo.CloneOptions{
-			URL:      addGitlabArgs.originUrl,
+			URL:      addArgs.originUrl,
 			Branch:   addArgs.originBranch,
 			Username: addGitlabArgs.owner,
 			Password: glToken,
@@ -182,7 +180,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	logger.Successf("")
-	originUrl, err := config.UniversalURL(addGitlabArgs.originUrl)
+	originUrl, err := config.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err
 	}

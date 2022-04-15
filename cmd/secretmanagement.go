@@ -17,26 +17,19 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-
-	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
 var secretManagementCmd = &cobra.Command{
 	Use:   "secret-management",
 	Short: "",
 	Long:  ``,
-	RunE:  secretManagementCmdRun,
 }
 
 type secretManagementFlags struct {
 	output           string
 	path             string
 	decryptionSecret string
-	fleetUrl         string
 	fleetBranch      string
-	username         string
-	password         string
-	privateKeyFile   string
 
 	authorName  string
 	authorEmail string
@@ -45,62 +38,13 @@ type secretManagementFlags struct {
 var secretManagementArgs secretManagementFlags
 
 func init() {
-	secretManagementCmd.Flags().StringVarP(&secretManagementArgs.output, "ouput", "o", "sopsAgeSecret.yaml", "output where to save the secret to apply")
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
-	secretManagementCmd.Flags().StringVarP(&secretManagementArgs.username, "username", "u", "git", "basic authentication username")
-	secretManagementCmd.Flags().StringVarP(&secretManagementArgs.password, "password", "p", "", "basic authentication password")
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
+	secretManagementCmd.PersistentFlags().StringVarP(&secretManagementArgs.output, "ouput", "o", "secret.yaml", "output where to save the secret to apply")
+	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
+	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
+	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
 
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	secretManagementCmd.Flags().StringVar(&secretManagementArgs.authorEmail, "author-email", "", "author email for Git commits")
+	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(secretManagementCmd)
-}
-
-func secretManagementCmdRun(cmd *cobra.Command, args []string) error {
-	logger.Actionf("Clone the fleet repository.")
-	clusterRepo, err := repo.CloneClusterRepo(
-		&repo.CloneOptions{
-			URL:            secretManagementArgs.fleetUrl,
-			Branch:         secretManagementArgs.fleetBranch,
-			Username:       secretManagementArgs.username,
-			Password:       secretManagementArgs.password,
-			PrivateKeyFile: secretManagementArgs.privateKeyFile,
-			Timeout:        rootArgs.timeout,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	logger.Successf("")
-	logger.Actionf("Configure the secret management.")
-	err = clusterRepo.OpenClusterConfig()
-	if err != nil {
-		return err
-	}
-	err = clusterRepo.ConfigureSecretManagement(
-		secretManagementArgs.decryptionSecret,
-		secretManagementArgs.output,
-		secretManagementArgs.path,
-	)
-	if err != nil {
-		return err
-	}
-	logger.Successf("")
-	logger.Actionf("Commit and push to the fleet repository.")
-	err = clusterRepo.CommitPush(
-		secretManagementArgs.authorName,
-		secretManagementArgs.authorEmail,
-		"[configure secret management] Configure secret management using sops and age",
-		"",
-		rootArgs.timeout,
-	)
-	if err != nil {
-		return err
-	}
-	logger.Successf("")
-	return nil
 }

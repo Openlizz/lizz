@@ -36,7 +36,6 @@ var addGitCmd = &cobra.Command{
 }
 
 type addGitFlags struct {
-	originUrl      string
 	destinationUrl string
 	fleetUrl       string
 	username       string
@@ -48,7 +47,6 @@ type addGitFlags struct {
 var addGitArgs addGitFlags
 
 func init() {
-	addGitCmd.Flags().StringVar(&addGitArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
 	addGitCmd.Flags().StringVar(&addGitArgs.destinationUrl, "destination-url", "", "Git repository URL where to push the application repository")
 	addGitCmd.Flags().StringVar(&addGitArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
 	addGitCmd.Flags().StringVarP(&addGitArgs.username, "username", "u", "git", "basic authentication username")
@@ -73,7 +71,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	logger.Actionf("Clone application repository.")
 	applicationRepo, err := repo.CloneApplicationRepo(
 		&repo.CloneOptions{
-			URL:            addGitArgs.originUrl,
+			URL:            addArgs.originUrl,
 			Branch:         addArgs.originBranch,
 			Username:       addGitArgs.username,
 			Password:       addGitArgs.password,
@@ -112,7 +110,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	originUrl, err := config.UniversalURL(addGitArgs.originUrl)
+	originUrl, err := config.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err
 	}

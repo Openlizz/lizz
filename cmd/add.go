@@ -38,6 +38,7 @@ const (
 )
 
 type addFlags struct {
+	originUrl          string
 	originBranch       string
 	clusterRole        bool
 	decryptionSecret   string
@@ -62,6 +63,7 @@ type addFlags struct {
 var addArgs addFlags
 
 func init() {
+	addCmd.PersistentFlags().StringVar(&addArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
 	addCmd.PersistentFlags().StringVar(&addArgs.originBranch, "origin-branch", "main", "Git branch of the application origin repository")
 	addCmd.PersistentFlags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "assumes the deploy key is already setup, skips confirmation")
 	addCmd.PersistentFlags().StringVar(&addArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
