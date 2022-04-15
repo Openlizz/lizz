@@ -22,15 +22,8 @@ type ApplicationRepo struct {
 	git    *gogit.GoGit
 }
 
-func CloneApplicationRepo(
-	URL string,
-	branch string,
-	username string,
-	password string,
-	privateKeyFile string,
-	timeout time.Duration,
-) (*ApplicationRepo, error) {
-	git, err := Clone(URL, branch, username, password, privateKeyFile, timeout)
+func CloneApplicationRepo(options *CloneOptions) (*ApplicationRepo, error) {
+	git, err := Clone(options)
 	if err != nil {
 		return nil, err
 	}

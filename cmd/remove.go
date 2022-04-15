@@ -57,12 +57,14 @@ func init() {
 
 func removeCmdRun(cmd *cobra.Command, args []string) error {
 	clusterRepo, err := repo.CloneClusterRepo(
-		removeArgs.fleetUrl,
-		removeArgs.fleetBranch,
-		removeArgs.username,
-		removeArgs.password,
-		removeArgs.privateKeyFile,
-		rootArgs.timeout,
+		&repo.CloneOptions{
+			URL:            removeArgs.fleetUrl,
+			Branch:         removeArgs.fleetBranch,
+			Username:       removeArgs.username,
+			Password:       removeArgs.password,
+			PrivateKeyFile: removeArgs.privateKeyFile,
+			Timeout:        rootArgs.timeout,
+		},
 	)
 	if err != nil {
 		return err

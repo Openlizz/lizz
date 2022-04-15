@@ -32,6 +32,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"gitlab.com/openlizz/lizz/internal/git"
 )
@@ -223,7 +224,6 @@ func (g *GoGit) Push(ctx context.Context, remoteName string, caBundle []byte) er
 	if g.repository == nil {
 		return git.ErrNoGitRepository
 	}
-
 	return g.repository.PushContext(ctx, &gogit.PushOptions{
 		RemoteName: remoteName,
 		Auth:       g.auth,
@@ -274,6 +274,13 @@ func (g *GoGit) CreateRemote(url, name string) (string, error) {
 
 func (g *GoGit) Path() string {
 	return g.path
+}
+
+func (g *GoGit) SetAuth(username string, password string) {
+	g.auth = &http.BasicAuth{
+		Username: username,
+		Password: password,
+	}
 }
 
 func isRemoteBranchNotFoundErr(err error, ref string) bool {

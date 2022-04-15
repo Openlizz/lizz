@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"gitlab.com/openlizz/lizz/internal/config"
-	"gitlab.com/openlizz/lizz/internal/flags"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
 	"gitlab.com/openlizz/lizz/internal/yaml"
 	yml "sigs.k8s.io/yaml"
@@ -21,8 +20,8 @@ type ClusterRepo struct {
 	git    *gogit.GoGit
 }
 
-func CloneClusterRepo(URL string, branch string, username string, password string, privateKeyFile string, timeout time.Duration) (*ClusterRepo, error) {
-	git, err := Clone(URL, branch, username, password, privateKeyFile, timeout)
+func CloneClusterRepo(options *CloneOptions) (*ClusterRepo, error) {
+	git, err := Clone(options)
 	if err != nil {
 		return nil, err
 	}
@@ -104,25 +103,15 @@ func (r *ClusterRepo) ConfigureSecretManagement(secretName string, output string
 }
 
 func (r *ClusterRepo) AddApplication(
-	repository string,
+	URL string,
 	destinationPrivate bool,
 	applicationConfig *config.ApplicationConfig,
 	clusterRole bool,
-	URL string,
 	decryptionSecret string,
 	path string,
-	sourceSecretName string,
-	username string,
-	password string,
-	tokenAuth bool,
-	caFile string,
-	keyAlgorithm flags.PublicKeyAlgorithm,
-	keyRSABits flags.RSAKeyBits,
-	keyECDSACurve flags.ECDSACurve,
-	sshHostname string,
-	privateKeyFile string,
+	sourceSecretOptions *yaml.SourceSecretOptions,
 ) (string, error) {
-	repository, err := config.UniversalURL(repository)
+	repository, err := config.UniversalURL(URL)
 	if err != nil {
 		return "", err
 	}
@@ -156,20 +145,7 @@ func (r *ClusterRepo) AddApplication(
 	// Create secret for git repo credentials and pass the name of the secret to sync
 	if destinationPrivate == true {
 		var sourceSecretY string
-		sourceSecretY, publicKey, err = yaml.NewSourceSecretYaml(
-			applicationConfig.Name,
-			sourceSecretName,
-			username,
-			password,
-			tokenAuth,
-			caFile,
-			repositoryURL,
-			keyAlgorithm,
-			keyRSABits,
-			keyECDSACurve,
-			sshHostname,
-			privateKeyFile,
-		)
+		sourceSecretY, publicKey, err = yaml.NewSourceSecretYaml(repositoryURL, sourceSecretOptions)
 		if err != nil {
 			return "", err
 		}
@@ -219,7 +195,7 @@ func (r *ClusterRepo) AddApplication(
 		applicationConfig.DependsOn,
 		serviceAccountName,
 		destinationPrivate,
-		sourceSecretName,
+		sourceSecretOptions.Name,
 	)
 	if err != nil {
 		return "", err
