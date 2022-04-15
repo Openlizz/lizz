@@ -11,76 +11,72 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func NewSourceSecretYaml(
-	namespace string,
-	name string,
-	username string,
-	password string,
-	tokenAuth bool,
-	caFile string,
-	repositoryURL *url.URL,
-	keyAlgorithm flags.PublicKeyAlgorithm,
-	keyRSABits flags.RSAKeyBits,
-	keyECDSACurve flags.ECDSACurve,
-	sshHostname string,
-	privateKeyFile string,
-) (string, string, error) {
+type SourceSecretOptions struct {
+	Namespace      string
+	Name           string
+	Username       string
+	Password       string
+	TokenAuth      bool
+	CaFile         string
+	KeyAlgorithm   flags.PublicKeyAlgorithm
+	KeyRSABits     flags.RSAKeyBits
+	KeyECDSACurve  flags.ECDSACurve
+	Hostname       string
+	SshHostname    string
+	PrivateKeyFile string
+	PlainProvider  bool
+}
+
+func NewSourceSecretYaml(repositoryURL *url.URL, options *SourceSecretOptions) (string, string, error) {
 	secretOpts := sourcesecret.Options{
-		Name:         name,
-		Namespace:    namespace,
+		Name:         options.Name,
+		Namespace:    options.Namespace,
 		ManifestFile: sourcesecret.MakeDefaultOptions().ManifestFile,
 	}
-	if tokenAuth {
-		secretOpts.Username = username
-		secretOpts.Password = password
+	if options.TokenAuth {
+		secretOpts.Username = options.Username
+		secretOpts.Password = options.Password
 
-		if caFile != "" {
-			secretOpts.CAFilePath = caFile
+		if options.CaFile != "" {
+			secretOpts.CAFilePath = options.CaFile
 		}
-
 		// Remove port of the given host when not syncing over HTTP/S to not assume port for protocol
 		// This _might_ be overwritten later on by e.g. --ssh-hostname
 		if repositoryURL.Scheme != "https" && repositoryURL.Scheme != "http" {
 			repositoryURL.Host = repositoryURL.Hostname()
 		}
-
-		// Configure repository URL to match auth config for sync.
 		repositoryURL.User = nil
 		repositoryURL.Scheme = "https"
 	} else {
-		if keyAlgorithm == "" {
-			keyAlgorithm = flags.PublicKeyAlgorithm(sourcesecret.ECDSAPrivateKeyAlgorithm)
+		if options.KeyAlgorithm == "" {
+			options.KeyAlgorithm = flags.PublicKeyAlgorithm(sourcesecret.ECDSAPrivateKeyAlgorithm)
 		}
-		if keyRSABits == 0 {
-			keyRSABits = 2048
+		if options.KeyRSABits == 0 {
+			options.KeyRSABits = 2048
 		}
 		keyECDSACurveNil := flags.ECDSACurve{Curve: nil}
-		if keyECDSACurve == keyECDSACurveNil {
-			keyECDSACurve = flags.ECDSACurve{Curve: elliptic.P384()}
+		if options.KeyECDSACurve == keyECDSACurveNil {
+			options.KeyECDSACurve = flags.ECDSACurve{Curve: elliptic.P384()}
 		}
-		secretOpts.PrivateKeyAlgorithm = sourcesecret.PrivateKeyAlgorithm(keyAlgorithm)
-		secretOpts.Password = password
-		secretOpts.RSAKeyBits = int(keyRSABits)
-		secretOpts.ECDSACurve = keyECDSACurve.Curve
-
-		// Configure repository URL to match auth config for sync
-
-		// Override existing user when user is not already set
-		// or when a username was passed in
-		if repositoryURL.User == nil || username != "git" {
-			repositoryURL.User = url.User(username)
-		}
-
+		secretOpts.PrivateKeyAlgorithm = sourcesecret.PrivateKeyAlgorithm(options.KeyAlgorithm)
+		secretOpts.RSAKeyBits = int(options.KeyRSABits)
+		secretOpts.ECDSACurve = options.KeyECDSACurve.Curve
 		repositoryURL.Scheme = "ssh"
-		if sshHostname != "" {
-			repositoryURL.Host = sshHostname
+		if options.SshHostname != "" {
+			repositoryURL.Host = options.SshHostname
 		}
-		if privateKeyFile != "" {
-			secretOpts.PrivateKeyPath = privateKeyFile
+		if options.PrivateKeyFile != "" {
+			secretOpts.PrivateKeyPath = options.PrivateKeyFile
 		}
-
-		// Configure last as it depends on the config above.
-		secretOpts.SSHHostname = repositoryURL.Host
+		if repositoryURL.User == nil || options.Username != "git" {
+			repositoryURL.User = url.User(options.Username)
+		}
+		if options.PlainProvider == true {
+			secretOpts.Password = options.Password
+			secretOpts.SSHHostname = repositoryURL.Host
+		} else {
+			secretOpts.SSHHostname = options.Hostname
+		}
 
 	}
 	manifest, err := sourcesecret.Generate(secretOpts)

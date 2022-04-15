@@ -17,24 +17,21 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/config"
-	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "",
 	Long:  ``,
-	RunE:  initCmdRun,
 }
 
 type initFlags struct {
-	originUrl      string
-	originBranch   string
-	destinationUrl string
-	username       string
-	password       string
-	privateKeyFile string
+	originUrl          string
+	originBranch       string
+	destinationBranch  string
+	destinationPrivate bool
+	caFile             string
+	privateKeyFile     string
 
 	authorName  string
 	authorEmail string
@@ -43,49 +40,15 @@ type initFlags struct {
 var initArgs initFlags
 
 func init() {
-	initCmd.Flags().StringVar(&initArgs.originUrl, "origin-url", "", "Git repository URL")
-	initCmd.Flags().StringVar(&initArgs.originBranch, "origin-branch", "main", "Git branch of the repository")
-	initCmd.Flags().StringVar(&initArgs.destinationUrl, "destination-url", "", "Git repository URL")
-	initCmd.Flags().StringVarP(&initArgs.username, "username", "u", "git", "basic authentication username")
-	initCmd.Flags().StringVarP(&initArgs.password, "password", "p", "", "basic authentication password")
-	initCmd.Flags().StringVar(&initArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
+	initCmd.PersistentFlags().StringVar(&initArgs.originUrl, "origin-url", "", "Git repository URL")
+	initCmd.PersistentFlags().StringVar(&initArgs.originBranch, "origin-branch", "main", "Git branch of the repository")
+	initCmd.PersistentFlags().StringVar(&initArgs.destinationBranch, "destination-branch", "main", "Git branch of the destination repository")
+	initCmd.PersistentFlags().BoolVar(&initArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private")
+	initCmd.PersistentFlags().StringVar(&initArgs.caFile, "ca-file", "", "path to TLS CA file used for validating self-signed certificates")
+	initCmd.PersistentFlags().StringVar(&initArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
-	initCmd.Flags().StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
-	initCmd.Flags().StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
+	initCmd.PersistentFlags().StringVar(&initArgs.authorName, "author-name", "Lizz", "author name for Git commits")
+	initCmd.PersistentFlags().StringVar(&initArgs.authorEmail, "author-email", "", "author email for Git commits")
 
 	rootCmd.AddCommand(initCmd)
-}
-
-func initCmdRun(cmd *cobra.Command, args []string) error {
-	clusterRepo, err := repo.CloneClusterRepo(
-		initArgs.originUrl,
-		initArgs.originBranch,
-		initArgs.username,
-		initArgs.password,
-		initArgs.privateKeyFile,
-		rootArgs.timeout,
-	)
-	if err != nil {
-		return err
-	}
-	head, err := clusterRepo.Git().Head()
-	if err != nil {
-		return err
-	}
-	originUrl, err := config.UniversalURL(initArgs.originUrl)
-	if err != nil {
-		return err
-	}
-	clusterRepo.NewClusterConfig(originUrl, head)
-	clusterRepo.CommitPush(
-		initArgs.authorName,
-		initArgs.authorEmail,
-		"Initialize cluster repository",
-		initArgs.destinationUrl,
-		rootArgs.timeout,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
 }
