@@ -38,23 +38,25 @@ const (
 )
 
 type addFlags struct {
-	originUrl          string
-	originBranch       string
-	clusterRole        bool
-	decryptionSecret   string
-	path               string
-	destinationBranch  string
-	destinationPrivate bool
-	fleetBranch        string
-	interval           time.Duration
-	sourceSecretName   string
-	tokenAuth          bool
-	keyAlgorithm       flags.PublicKeyAlgorithm
-	keyRSABits         flags.RSAKeyBits
-	keyECDSACurve      flags.ECDSACurve
-	sshHostname        string
-	caFile             string
-	privateKeyFile     string
+	applicationName      string
+	applicationNamespace string
+	originUrl            string
+	originBranch         string
+	clusterRole          bool
+	decryptionSecret     string
+	path                 string
+	destinationBranch    string
+	destinationPrivate   bool
+	fleetBranch          string
+	interval             time.Duration
+	sourceSecretName     string
+	tokenAuth            bool
+	keyAlgorithm         flags.PublicKeyAlgorithm
+	keyRSABits           flags.RSAKeyBits
+	keyECDSACurve        flags.ECDSACurve
+	sshHostname          string
+	caFile               string
+	privateKeyFile       string
 
 	authorName  string
 	authorEmail string
@@ -63,6 +65,8 @@ type addFlags struct {
 var addArgs addFlags
 
 func init() {
+	addCmd.PersistentFlags().StringVar(&addArgs.applicationName, "name", "", "Name of the application to add (default to the name of the application)")
+	addCmd.PersistentFlags().StringVar(&addArgs.applicationNamespace, "namespace", "", "Namespace where to add the application (default to the name of the application)")
 	addCmd.PersistentFlags().StringVar(&addArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
 	addCmd.PersistentFlags().StringVar(&addArgs.originBranch, "origin-branch", "main", "Git branch of the application origin repository")
 	addCmd.PersistentFlags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "assumes the deploy key is already setup, skips confirmation")

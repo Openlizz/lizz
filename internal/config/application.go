@@ -15,20 +15,26 @@ import (
 )
 
 type ApplicationDependency struct {
-	Name       string `json:"name"`
-	Repository string `json:"repository"`
-	ShaRange   string `json:"shaRange"`
-	Value      bool   `json:"value"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Print       bool   `json:"print"`
+	Repository  string `json:"repository"`
+	ShaRange    string `json:"shaRange"`
+	Value       bool   `json:"value"`
 }
 
 type ClusterValue struct {
-	Name     string `json:"name"`
-	Template string `json:"template"`
-	Value    string `json:"value"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Print       bool   `json:"print"`
+	Template    string `json:"template"`
+	Value       string `json:"value"`
 }
 
 type ApplicationValue struct {
 	Name          string `json:"name"`
+	Description   string `json:"description"`
+	Print         bool   `json:"print"`
 	RepositoryUrl string `json:"repositoryUrl"`
 	Kind          string `json:"kind"`
 	ResourceName  string `json:"resourceName"`
@@ -37,11 +43,14 @@ type ApplicationValue struct {
 }
 type Password struct {
 	Name        string `json:"name"`
+	Description string `json:"description"`
+	Print       bool   `json:"print"`
 	Lenght      int    `json:"length"`
 	NumDigits   int    `json:"numDigits"`
 	NumSymbols  int    `json:"numSymbols"`
 	NoUpper     bool   `json:"noUpper"`
 	AllowRepeat bool   `json:"allowRepeat"`
+	Base64      bool   `json:"base64"`
 }
 
 type Values struct {
@@ -58,6 +67,7 @@ type Encryption struct {
 
 type ApplicationConfig struct {
 	Name                string                           `json:"name"`
+	Namespace           string                           `json:"namespace"`
 	ServiceAccountName  string                           `json:"serviceAccountName"`
 	Repository          string                           `json:"repository"`
 	Sha                 string                           `json:"sha"`
@@ -150,6 +160,12 @@ func RenderApplicationConfig(
 	err = yaml.Unmarshal([]byte(tpl.String()), c)
 	if err != nil {
 		return &ApplicationConfig{}, err
+	}
+	if c.Namespace == "" {
+		c.Namespace = c.Name
+	}
+	if c.ServiceAccountName == "" {
+		c.ServiceAccountName = c.Name
 	}
 	return c, nil
 }

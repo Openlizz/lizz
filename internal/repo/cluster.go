@@ -144,13 +144,7 @@ func (r *ClusterRepo) AddApplication(
 	if err != nil {
 		return "", err
 	}
-	var serviceAccountName string
-	if applicationConfig.ServiceAccountName != "" {
-		serviceAccountName = applicationConfig.ServiceAccountName
-	} else {
-		serviceAccountName = applicationConfig.Name
-	}
-	rbacY, err := yaml.NewRbacYaml(applicationConfig.Name, applicationConfig.Name, "cluster-admin", clusterRole, serviceAccountName)
+	rbacY, err := yaml.NewRbacYaml(applicationConfig.Namespace, applicationConfig.Name, "cluster-admin", clusterRole, applicationConfig.ServiceAccountName)
 	if err != nil {
 		return "", err
 	}
@@ -211,13 +205,13 @@ func (r *ClusterRepo) AddApplication(
 		}
 	}
 	syncY, err := yaml.NewSyncYaml(
-		applicationConfig.Name,
+		applicationConfig.Namespace,
 		applicationConfig.Name,
 		repositoryURL.String(),
 		applicationConfig.Encryption.Enabled || destinationPrivate,
 		decryptionSecret,
 		applicationConfig.DependsOn,
-		serviceAccountName,
+		applicationConfig.ServiceAccountName,
 		destinationPrivate,
 		sourceSecretOptions.Name,
 	)
@@ -272,7 +266,7 @@ func (r *ClusterRepo) AddApplication(
 		return "", err
 	}
 	patchY, err := yaml.NewPatchYaml(
-		applicationConfig.Name,
+		applicationConfig.Namespace,
 		applicationConfig.Name,
 		path,
 	)

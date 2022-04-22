@@ -110,6 +110,12 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if addArgs.applicationName != "" {
+		applicationRepo.Config().Name = addArgs.applicationName
+	}
+	if addArgs.applicationNamespace != "" {
+		applicationRepo.Config().Namespace = addArgs.applicationNamespace
+	}
 	originUrl, err := config.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err

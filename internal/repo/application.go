@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"os"
@@ -91,14 +92,41 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 	status.Start("Render the application values ")
 	defer status.End(false)
 	tv := make(map[string]interface{})
+	tv["name"] = r.config.Name
+	tv["namespace"] = r.config.Namespace
+	tv["serviceAccountName"] = r.config.ServiceAccountName
 	for _, v := range r.config.Values.ApplicationDependencies {
+		for k := range tv {
+			if v.Name == k {
+				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+			}
+		}
 		tv[v.Name] = v.Value
+		if v.Print == true {
+			status.PrintValue(v.Name, v.Description, tv[v.Name])
+		}
 	}
 	for _, v := range r.config.Values.ApplicationValues {
+		for k := range tv {
+			if v.Name == k {
+				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+			}
+		}
 		tv[v.Name] = v.Value
+		if v.Print == true {
+			status.PrintValue(v.Name, v.Description, tv[v.Name])
+		}
 	}
 	for _, v := range r.config.Values.ClusterValues {
+		for k := range tv {
+			if v.Name == k {
+				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+			}
+		}
 		tv[v.Name] = v.Value
+		if v.Print == true {
+			status.PrintValue(v.Name, v.Description, tv[v.Name])
+		}
 	}
 	for _, pwd := range r.config.Values.Passwords {
 		res, err := password.Generate(
@@ -110,6 +138,17 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 		)
 		if err != nil {
 			return err
+		}
+		if pwd.Print == true {
+			status.PrintValue(pwd.Name, pwd.Description, res)
+		}
+		if pwd.Base64 == true {
+			res = base64.StdEncoding.EncodeToString([]byte(res))
+		}
+		for k := range tv {
+			if pwd.Name == k {
+				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+			}
 		}
 		tv[pwd.Name] = res
 	}

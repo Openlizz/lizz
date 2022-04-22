@@ -88,3 +88,7 @@ func (s *Status) End(success bool) {
 
 	s.status = ""
 }
+
+func (s *Status) PrintValue(name, description string, value interface{}) {
+	s.logger.V(0).Infof(" \x1b[33m→\x1b[0m %s — %s\n \x1b[33m→\x1b[0m %s", name, description, value)
+}
