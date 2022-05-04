@@ -241,7 +241,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		addArgs.decryptionSecret,
 		addArgs.path,
 		&yaml.SourceSecretOptions{
-			Namespace:     applicationRepo.Config().Name,
+			Namespace:     applicationRepo.Config().Namespace,
 			Name:          addArgs.sourceSecretName,
 			Username:      "git",
 			Password:      glToken,

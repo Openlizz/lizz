@@ -19,22 +19,21 @@ type Configuration struct {
 }
 
 type ClusterConfig struct {
-	Repository     string          `json:"repository"`
-	Sha            string          `json:"sha"`
-	AgeKey         string          `json:"ageKey,omitempty"`
-	SopsAgeSecret  string          `json:"sopsAgeSecret,omitempty"`
-	Applications   []Application   `json:"applications,omitempty"`
-	Configurations []Configuration `json:"configurations,omitempty"`
+	Repository    string                 `json:"repository"`
+	Sha           string                 `json:"sha"`
+	AgeKey        string                 `json:"ageKey,omitempty"`
+	SopsAgeSecret string                 `json:"sopsAgeSecret,omitempty"`
+	Applications  []Application          `json:"applications,omitempty"`
+	Env           map[string]interface{} `json:"env,omitempty"`
 }
 
 func NewClusterConfig(repository string, sha string) *ClusterConfig {
 	return &ClusterConfig{
-		Repository:     repository,
-		Sha:            sha,
-		AgeKey:         "",
-		SopsAgeSecret:  "",
-		Applications:   []Application{},
-		Configurations: []Configuration{},
+		Repository:    repository,
+		Sha:           sha,
+		AgeKey:        "",
+		SopsAgeSecret: "",
+		Applications:  []Application{},
 	}
 }
 
@@ -90,6 +89,13 @@ func (c *ClusterConfig) AddApplication(repository string, applicationConfig *App
 
 func (c *ClusterConfig) RemoveApplication(name string) {
 	c.Applications = removeApplicationByName(c.Applications, name)
+}
+
+func (c *ClusterConfig) AddEnv(name, value string) {
+	if c.Env == nil {
+		c.Env = make(map[string]interface{})
+	}
+	c.Env[name] = value
 }
 
 func appendApplicationIfMissing(slice []Application, elem Application) []Application {

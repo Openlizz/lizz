@@ -92,3 +92,7 @@ func (s *Status) End(success bool) {
 func (s *Status) PrintValue(name, description string, value interface{}) {
 	s.logger.V(0).Infof(" \x1b[33m→\x1b[0m %s — %s\n \x1b[33m→\x1b[0m %s", name, description, value)
 }
+
+func (s *Status) PrintError(err error) {
+	s.logger.V(0).Infof("\x1b[31mError:\x1b[0m %v", err)
+}

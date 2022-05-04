@@ -230,7 +230,7 @@ func (r *ClusterRepo) AddApplication(
 			strings.Replace(
 				r.Config().SopsAgeSecret,
 				"namespace: flux-system",
-				"namespace: "+applicationConfig.Name,
+				"namespace: "+applicationConfig.Namespace,
 				1,
 			),
 			filepath.Join(
@@ -339,6 +339,18 @@ func (r *ClusterRepo) RemoveApplication(name string, status *cli.Status) error {
 		applicationsY,
 		filepath.Join(r.Git().Path(), "applications", "kustomization.yaml"),
 	)
+	if err != nil {
+		return err
+	}
+	status.End(true)
+	return nil
+}
+
+func (r *ClusterRepo) AddEnv(name, value string, status *cli.Status) error {
+	status.Start("Add env variable to the cluster")
+	defer status.End(false)
+	r.config.AddEnv(name, value)
+	err := r.config.Save(filepath.Join(r.git.Path(), "config.yaml"))
 	if err != nil {
 		return err
 	}

@@ -49,7 +49,7 @@ func Execute() {
 	log.SetFlags(0)
 	err := rootCmd.Execute()
 	if err != nil {
-		logger.Errorf("%v", err)
+		status.PrintError(err)
 		os.Exit(1)
 	}
 }

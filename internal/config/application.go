@@ -16,41 +16,42 @@ import (
 
 type ApplicationDependency struct {
 	Name        string `json:"name"`
-	Description string `json:"description"`
-	Print       bool   `json:"print"`
-	Repository  string `json:"repository"`
-	ShaRange    string `json:"shaRange"`
-	Value       bool   `json:"value"`
+	Description string `json:"description,omitempty"`
+	Print       bool   `json:"print,omitempty"`
+	Repository  string `json:"repository,omitempty"`
+	ShaRange    string `json:"shaRange,omitempty"`
+	Value       bool   `json:"value,omitempty"`
 }
 
 type ClusterValue struct {
 	Name        string `json:"name"`
-	Description string `json:"description"`
-	Print       bool   `json:"print"`
-	Template    string `json:"template"`
-	Value       string `json:"value"`
+	Required    bool   `json:"required,omitempty"`
+	Description string `json:"description,omitempty"`
+	Print       bool   `json:"print,omitempty"`
+	Template    string `json:"template,omitempty"`
+	Value       string `json:"value,omitempty"`
 }
 
 type ApplicationValue struct {
 	Name          string `json:"name"`
-	Description   string `json:"description"`
-	Print         bool   `json:"print"`
-	RepositoryUrl string `json:"repositoryUrl"`
-	Kind          string `json:"kind"`
-	ResourceName  string `json:"resourceName"`
-	Template      string `json:"template"`
-	Value         string `json:"value"`
+	Description   string `json:"description,omitempty"`
+	Print         bool   `json:"print,omitempty"`
+	RepositoryUrl string `json:"repositoryUrl,omitempty"`
+	Kind          string `json:"kind,omitempty"`
+	ResourceName  string `json:"resourceName,omitempty"`
+	Template      string `json:"template,omitempty"`
+	Value         string `json:"value,omitempty"`
 }
 type Password struct {
 	Name        string `json:"name"`
-	Description string `json:"description"`
-	Print       bool   `json:"print"`
-	Lenght      int    `json:"length"`
-	NumDigits   int    `json:"numDigits"`
-	NumSymbols  int    `json:"numSymbols"`
-	NoUpper     bool   `json:"noUpper"`
-	AllowRepeat bool   `json:"allowRepeat"`
-	Base64      bool   `json:"base64"`
+	Description string `json:"description,omitempty"`
+	Print       bool   `json:"print,omitempty"`
+	Lenght      int    `json:"length,omitempty"`
+	NumDigits   int    `json:"numDigits,omitempty"`
+	NumSymbols  int    `json:"numSymbols,omitempty"`
+	NoUpper     bool   `json:"noUpper,omitempty"`
+	AllowRepeat bool   `json:"allowRepeat,omitempty"`
+	Base64      bool   `json:"base64,omitempty"`
 }
 
 type Values struct {
@@ -61,8 +62,8 @@ type Values struct {
 }
 
 type Encryption struct {
-	Enabled    bool     `json:"enabled"`
-	InputPaths []string `json:"inputPaths"`
+	Enabled    bool     `json:"enabled,omitempty"`
+	InputPaths []string `json:"inputPaths,omitempty"`
 }
 
 type ApplicationConfig struct {
@@ -141,16 +142,26 @@ func RenderApplicationConfig(
 				err,
 			)
 		}
+		if clusterValue.Required == true && tpl.String() == "" {
+			return &ApplicationConfig{}, fmt.Errorf(
+				"cluster value with name '%s' and template '%s' cannot be resolved and is required for the application",
+				clusterValue.Name,
+				clusterValue.Template,
+			)
+		}
 		v.ClusterValues[idx].Value = tpl.String()
 		tv[clusterValue.Name] = tpl.String()
 	}
 	// render application values ?
 
-	// render the application configuration with the template values
-	t := template.Must(template.New("applicationConfig").Parse(string(y)))
+	// render the application configuration (without the values) with the template values
+	t := template.Must(template.New("applicationConfig").Parse(strings.ReplaceAll(string(y), vy, "")))
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, tv)
 	if err != nil {
+		fmt.Println("RENDER:: \n", string(y))
+		fmt.Println("VALUES:: \n", string(vy))
+		fmt.Println("\nWITH:: ", tv)
 		return &ApplicationConfig{}, fmt.Errorf(
 			"error while rendering the application configuration file: %w",
 			err,
@@ -167,6 +178,8 @@ func RenderApplicationConfig(
 	if c.ServiceAccountName == "" {
 		c.ServiceAccountName = c.Name
 	}
+	// add the values (removed for rendering) to the config
+	c.Values = *v
 	return c, nil
 }
 

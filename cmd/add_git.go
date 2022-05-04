@@ -153,7 +153,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 		addArgs.decryptionSecret,
 		addArgs.path,
 		&yaml.SourceSecretOptions{
-			Namespace:      applicationRepo.Config().Name,
+			Namespace:      applicationRepo.Config().Namespace,
 			Name:           addArgs.sourceSecretName,
 			Username:       addGitArgs.username,
 			Password:       addGitArgs.password,
