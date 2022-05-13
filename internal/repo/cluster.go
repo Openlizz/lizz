@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"gitlab.com/openlizz/lizz/internal/yaml"
@@ -17,7 +16,7 @@ import (
 )
 
 type ClusterRepo struct {
-	config *config.ClusterConfig
+	config *ClusterConfig
 	git    *gogit.GoGit
 }
 
@@ -30,12 +29,12 @@ func CloneClusterRepo(options *CloneOptions, status *cli.Status) (*ClusterRepo, 
 	}
 	status.End(true)
 	return &ClusterRepo{
-		config: &config.ClusterConfig{},
+		config: &ClusterConfig{},
 		git:    git,
 	}, nil
 }
 
-func (r *ClusterRepo) Config() *config.ClusterConfig {
+func (r *ClusterRepo) Config() *ClusterConfig {
 	return r.config
 }
 
@@ -46,7 +45,7 @@ func (r *ClusterRepo) Git() *gogit.GoGit {
 func (r *ClusterRepo) NewClusterConfig(repository string, sha string, status *cli.Status) error {
 	status.Start("Create a new configuration for the cluster")
 	defer status.End(false)
-	c := config.NewClusterConfig(repository, sha)
+	c := NewClusterConfig(repository, sha)
 	r.config = c
 	err := r.SaveClusterConfig()
 	if err != nil {
@@ -59,7 +58,7 @@ func (r *ClusterRepo) NewClusterConfig(repository string, sha string, status *cl
 func (r *ClusterRepo) OpenClusterConfig(status *cli.Status) error {
 	status.Start("Open and read the cluster configuration file")
 	defer status.End(false)
-	c, err := config.OpenClusterConfig(filepath.Join(r.git.Path(), "config.yaml"))
+	c, err := OpenClusterConfig(filepath.Join(r.git.Path(), "config.yaml"))
 	if err != nil {
 		return err
 	}
@@ -125,8 +124,10 @@ func (r *ClusterRepo) ConfigureSecretManagement(secretName string, output string
 
 func (r *ClusterRepo) AddApplication(
 	URL string,
+	branch string,
+	provider string,
 	destinationPrivate bool,
-	applicationConfig *config.ApplicationConfig,
+	applicationConfig *ApplicationConfig,
 	clusterRole bool,
 	decryptionSecret string,
 	path string,
@@ -135,7 +136,7 @@ func (r *ClusterRepo) AddApplication(
 ) (string, error) {
 	status.Start("Add the application to the cluster repository ")
 	defer status.End(false)
-	repository, err := config.UniversalURL(URL)
+	repository, err := CreateRepository(URL, branch, provider)
 	if err != nil {
 		return "", err
 	}
@@ -208,6 +209,7 @@ func (r *ClusterRepo) AddApplication(
 		applicationConfig.Namespace,
 		applicationConfig.Name,
 		repositoryURL.String(),
+		branch,
 		applicationConfig.Encryption.Enabled || destinationPrivate,
 		decryptionSecret,
 		applicationConfig.DependsOn,

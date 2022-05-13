@@ -26,7 +26,6 @@ import (
 
 	"github.com/fluxcd/go-git-providers/gitprovider"
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 	"gitlab.com/openlizz/lizz/internal/yaml"
@@ -174,7 +173,17 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), status)
+	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), &repo.CloneOptions{
+		Username:    addGitlabArgs.owner,
+		Password:    glToken,
+		Timeout:     rootArgs.timeout,
+		Personal:    addGitlabArgs.personal,
+		Reconcile:   addGitlabArgs.reconcile,
+		Teams:       mapTeamSlice(addGitlabArgs.teams, glDefaultPermission),
+		CaBundle:    caBundle,
+		SshHostname: addArgs.sshHostname,
+		Provider:    providerClient,
+	}, status)
 	if err != nil {
 		return err
 	}
@@ -184,7 +193,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if addArgs.applicationNamespace != "" {
 		applicationRepo.Config().Namespace = addArgs.applicationNamespace
 	}
-	originUrl, err := config.UniversalURL(addArgs.originUrl)
+	originUrl, err := repo.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err
 	}
@@ -235,6 +244,8 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	}
 	publicKey, err := clusterRepo.AddApplication(
 		destinationUrl,
+		addArgs.destinationBranch,
+		"gitlab",
 		addArgs.destinationPrivate,
 		applicationRepo.Config(),
 		addArgs.clusterRole,

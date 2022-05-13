@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
@@ -67,7 +66,7 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	originUrl, err := config.UniversalURL(initArgs.originUrl)
+	originUrl, err := repo.UniversalURL(initArgs.originUrl)
 	if err != nil {
 		return err
 	}

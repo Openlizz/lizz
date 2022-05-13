@@ -14,6 +14,18 @@ import (
 	"go.mozilla.org/sops/v3/keyservice"
 )
 
+func Read(path string) (string, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("the path to the application config does not exist: %w", err)
+	}
+	y, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(y), nil
+}
+
 func Save(yaml string, path string) error {
 	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	if err != nil {

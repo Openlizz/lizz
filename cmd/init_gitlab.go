@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
@@ -123,7 +122,7 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	originUrl, err := config.UniversalURL(initArgs.originUrl)
+	originUrl, err := repo.UniversalURL(initArgs.originUrl)
 	if err != nil {
 		return err
 	}

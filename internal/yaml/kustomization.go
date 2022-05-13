@@ -19,14 +19,23 @@ func NewKustomizationYaml(decryption bool, sourceSecret bool) (string, error) {
 	kustomizeC := kustomize.Kustomization{
 		Resources: resources,
 	}
-	kustomizeY, err := exportKustomization(kustomizeC)
+	kustomizeY, err := ExportKustomization(kustomizeC)
 	if err != nil {
 		return "", err
 	}
 	return kustomizeY, nil
 }
 
-func exportKustomization(kustomization kustomize.Kustomization) (string, error) {
+func ReadKustomization(y string) (kustomize.Kustomization, error) {
+	k := &kustomize.Kustomization{}
+	err := yaml.Unmarshal([]byte(y), &k)
+	if err != nil {
+		return kustomize.Kustomization{}, err
+	}
+	return *k, nil
+}
+
+func ExportKustomization(kustomization kustomize.Kustomization) (string, error) {
 	var builder strings.Builder
 	kustomization.TypeMeta = kustomize.TypeMeta{
 		APIVersion: "kustomize.config.k8s.io/v1beta1",

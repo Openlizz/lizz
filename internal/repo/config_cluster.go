@@ -1,4 +1,4 @@
-package config
+package repo
 
 import (
 	"fmt"
@@ -7,9 +7,16 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+type Repository struct {
+	URL    string `json:"url,omitempty"`
+	Owner  string `json:"owner,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Branch string `json:"branch,omitempty"`
+}
+
 type Application struct {
 	Name          string            `json:"name"`
-	Repository    string            `json:"repository"`
+	Repository    Repository        `json:"repository"`
 	Configuration ApplicationConfig `json:"configuration"`
 }
 
@@ -79,7 +86,7 @@ func (c *ClusterConfig) Save(path string) error {
 	return nil
 }
 
-func (c *ClusterConfig) AddApplication(repository string, applicationConfig *ApplicationConfig) {
+func (c *ClusterConfig) AddApplication(repository Repository, applicationConfig *ApplicationConfig) {
 	c.Applications = appendApplicationIfMissing(c.Applications, Application{
 		Name:          applicationConfig.Name,
 		Repository:    repository,

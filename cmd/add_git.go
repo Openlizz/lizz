@@ -23,7 +23,6 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/repo"
 	"gitlab.com/openlizz/lizz/internal/yaml"
 )
@@ -106,7 +105,12 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), status)
+	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), &repo.CloneOptions{
+		Username:       addGitArgs.username,
+		Password:       addGitArgs.password,
+		PrivateKeyFile: addGitArgs.privateKeyFile,
+		Timeout:        rootArgs.timeout,
+	}, status)
 	if err != nil {
 		return err
 	}
@@ -116,7 +120,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	if addArgs.applicationNamespace != "" {
 		applicationRepo.Config().Namespace = addArgs.applicationNamespace
 	}
-	originUrl, err := config.UniversalURL(addArgs.originUrl)
+	originUrl, err := repo.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err
 	}
@@ -147,6 +151,8 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	}
 	publicKey, err := clusterRepo.AddApplication(
 		addGitArgs.destinationUrl,
+		addArgs.destinationBranch,
+		"git",
 		addArgs.destinationPrivate,
 		applicationRepo.Config(),
 		addArgs.clusterRole,

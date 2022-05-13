@@ -6,21 +6,22 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/sethvargo/go-password/password"
-	"gitlab.com/openlizz/lizz/internal/config"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"gitlab.com/openlizz/lizz/internal/yaml"
 	"go.mozilla.org/sops/cmd/sops/codes"
 	"go.mozilla.org/sops/v3/cmd/sops/common"
+	yaml2 "gopkg.in/yaml.v2"
 )
 
 type ApplicationRepo struct {
-	config *config.ApplicationConfig
+	config *ApplicationConfig
 	git    *gogit.GoGit
 }
 
@@ -33,12 +34,12 @@ func CloneApplicationRepo(options *CloneOptions, status *cli.Status) (*Applicati
 	}
 	status.End(true)
 	return &ApplicationRepo{
-		config: &config.ApplicationConfig{},
+		config: &ApplicationConfig{},
 		git:    git,
 	}, nil
 }
 
-func (r *ApplicationRepo) Config() *config.ApplicationConfig {
+func (r *ApplicationRepo) Config() *ApplicationConfig {
 	return r.config
 }
 
@@ -47,7 +48,7 @@ func (r *ApplicationRepo) Git() *gogit.GoGit {
 }
 
 func (r *ApplicationRepo) OpenApplicationConfig() error {
-	c, err := config.OpenApplicationConfig(filepath.Join(r.git.Path(), "config.yaml"))
+	c, err := OpenApplicationConfig(filepath.Join(r.git.Path(), "config.yaml"))
 	if err != nil {
 		return err
 	}
@@ -55,12 +56,14 @@ func (r *ApplicationRepo) OpenApplicationConfig() error {
 	return nil
 }
 
-func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *config.ClusterConfig, status *cli.Status) error {
+func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *ClusterConfig, cloneOptions *CloneOptions, status *cli.Status) error {
 	status.Start("Render the application configuration ")
 	defer status.End(false)
-	c, err := config.RenderApplicationConfig(
+	c, err := RenderApplicationConfig(
 		filepath.Join(r.git.Path(), "config.yaml"),
 		clusterConfig,
+		cloneOptions,
+		status,
 	)
 	if err != nil {
 		return err
@@ -98,7 +101,7 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 	for _, v := range r.config.Values.ApplicationDependencies {
 		for k := range tv {
 			if v.Name == k {
-				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[v.Name] = v.Value
@@ -109,18 +112,15 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 	for _, v := range r.config.Values.ApplicationValues {
 		for k := range tv {
 			if v.Name == k {
-				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[v.Name] = v.Value
-		if v.Print == true {
-			status.PrintValue(v.Name, v.Description, tv[v.Name])
-		}
 	}
 	for _, v := range r.config.Values.ClusterValues {
 		for k := range tv {
 			if v.Name == k {
-				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[v.Name] = v.Value
@@ -147,10 +147,43 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 		}
 		for k := range tv {
 			if pwd.Name == k {
-				return fmt.Errorf("Application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[pwd.Name] = res
+	}
+	for _, v := range r.config.Values.ApplicationSecrets {
+		v.Secret["metadata"].(map[interface{}]interface{})["namespace"] = r.config.Namespace
+		y, err := yaml2.Marshal(v.Secret)
+		if err != nil {
+			return err
+		}
+		err = yaml.Save(string(y), filepath.Join(r.git.Path(), v.DestinationPath))
+		if err != nil {
+			return fmt.Errorf("error while saving the application secret: %w", err)
+		}
+		r.config.Encryption.Enabled = true
+		ky, err := yaml.Read(filepath.Join(r.git.Path(), v.KustomizationPath))
+		if err != nil {
+			return fmt.Errorf("error while reading the kustomization file of the application secret: %w", err)
+		}
+		k, err := yaml.ReadKustomization(ky)
+		if err != nil {
+			return fmt.Errorf("error while reading kustomization of the kustomization file of the application secret: %w", err)
+		}
+		rel, err := filepath.Rel(path.Dir(v.KustomizationPath), v.DestinationPath)
+		if err != nil {
+			return fmt.Errorf("error while getting the resource relative path for the application secret: %w", err)
+		}
+		k.Resources = append(k.Resources, rel)
+		ky, err = yaml.ExportKustomization(k)
+		if err != nil {
+			return fmt.Errorf("error while exporting the kustomization for the application secret: %w", err)
+		}
+		err = yaml.Save(ky, filepath.Join(r.git.Path(), v.KustomizationPath))
+		if err != nil {
+			return fmt.Errorf("error while saving the kustomization file of the application secret: %w", err)
+		}
 	}
 	var fps []string
 	err := filepath.Walk(r.git.Path(), func(path string, info os.FileInfo, err error) error {
@@ -205,7 +238,7 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 	return nil
 }
 
-func (r *ApplicationRepo) Encrypt(clusterConfig *config.ClusterConfig, status *cli.Status) error {
+func (r *ApplicationRepo) Encrypt(clusterConfig *ClusterConfig, status *cli.Status) error {
 	status.Start("Encrypt the application files ")
 	defer status.End(false)
 	if r.config.Encryption.Enabled == true {

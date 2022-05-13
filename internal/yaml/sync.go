@@ -17,6 +17,7 @@ func NewSyncYaml(
 	namespace string,
 	name string,
 	URL string,
+	branch string,
 	decryption bool,
 	decryptionSecret string,
 	dependsOn []meta.NamespacedObjectReference,
@@ -54,7 +55,7 @@ func NewSyncYaml(
 				Duration: 5 * time.Minute,
 			},
 			URL:       URL,
-			Reference: &sourcev1.GitRepositoryRef{Branch: "main"},
+			Reference: &sourcev1.GitRepositoryRef{Branch: branch},
 			SecretRef: secretRef,
 		},
 	}

@@ -34,7 +34,7 @@ func AddApplicationsYaml(path string, name string) (string, error) {
 		applicationsC.PatchesStrategicMerge,
 		kustomizePatch.StrategicMerge(name+"-patch.yaml"),
 	)
-	applicationsY, err := exportKustomization(applicationsC)
+	applicationsY, err := ExportKustomization(applicationsC)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func RemoveApplicationsYaml(path string, name string) (string, error) {
 		applicationsC.PatchesStrategicMerge,
 		name+"-patch.yaml",
 	)
-	applicationsY, err := exportKustomization(applicationsC)
+	applicationsY, err := ExportKustomization(applicationsC)
 	if err != nil {
 		return "", err
 	}
