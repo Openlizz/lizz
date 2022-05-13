@@ -8,7 +8,7 @@ import (
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta2"
 	"github.com/fluxcd/pkg/apis/meta"
-	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -82,7 +82,6 @@ func NewSyncYaml(
 				Kind: "GitRepository",
 				Name: name,
 			},
-			Validation: "client",
 			Decryption: decryptionC,
 		},
 	}
@@ -99,7 +98,7 @@ func exportRepository(
 ) (string, error) {
 	var builder strings.Builder
 	gitRepository.TypeMeta = metav1.TypeMeta{
-		APIVersion: "source.toolkit.fluxcd.io/v1beta1",
+		APIVersion: "source.toolkit.fluxcd.io/v1beta2",
 		Kind:       "GitRepository",
 	}
 	data, err := yaml.Marshal(gitRepository)
