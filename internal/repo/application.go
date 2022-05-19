@@ -152,39 +152,6 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 		}
 		tv[pwd.Name] = res
 	}
-	for _, v := range r.config.Values.ApplicationSecrets {
-		v.Secret["metadata"].(map[interface{}]interface{})["namespace"] = r.config.Namespace
-		y, err := yaml2.Marshal(v.Secret)
-		if err != nil {
-			return err
-		}
-		err = yaml.Save(string(y), filepath.Join(r.git.Path(), v.DestinationPath))
-		if err != nil {
-			return fmt.Errorf("error while saving the application secret: %w", err)
-		}
-		r.config.Encryption.Enabled = true
-		ky, err := yaml.Read(filepath.Join(r.git.Path(), v.KustomizationPath))
-		if err != nil {
-			return fmt.Errorf("error while reading the kustomization file of the application secret: %w", err)
-		}
-		k, err := yaml.ReadKustomization(ky)
-		if err != nil {
-			return fmt.Errorf("error while reading kustomization of the kustomization file of the application secret: %w", err)
-		}
-		rel, err := filepath.Rel(path.Dir(v.KustomizationPath), v.DestinationPath)
-		if err != nil {
-			return fmt.Errorf("error while getting the resource relative path for the application secret: %w", err)
-		}
-		k.Resources = append(k.Resources, rel)
-		ky, err = yaml.ExportKustomization(k)
-		if err != nil {
-			return fmt.Errorf("error while exporting the kustomization for the application secret: %w", err)
-		}
-		err = yaml.Save(ky, filepath.Join(r.git.Path(), v.KustomizationPath))
-		if err != nil {
-			return fmt.Errorf("error while saving the kustomization file of the application secret: %w", err)
-		}
-	}
 	var fps []string
 	err := filepath.Walk(r.git.Path(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -232,6 +199,39 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 		_, err = file.Write(tpl.Bytes())
 		if err != nil {
 			return err
+		}
+	}
+	for _, v := range r.config.Values.ApplicationSecrets {
+		v.Secret["metadata"].(map[interface{}]interface{})["namespace"] = r.config.Namespace
+		y, err := yaml2.Marshal(v.Secret)
+		if err != nil {
+			return err
+		}
+		err = yaml.Save(string(y), filepath.Join(r.git.Path(), v.DestinationPath))
+		if err != nil {
+			return fmt.Errorf("error while saving the application secret: %w", err)
+		}
+		r.config.Encryption.Enabled = true
+		ky, err := yaml.Read(filepath.Join(r.git.Path(), v.KustomizationPath))
+		if err != nil {
+			return fmt.Errorf("error while reading the kustomization file of the application secret: %w", err)
+		}
+		k, err := yaml.ReadKustomization(ky)
+		if err != nil {
+			return fmt.Errorf("error while reading kustomization of the kustomization file of the application secret: %w", err)
+		}
+		rel, err := filepath.Rel(path.Dir(v.KustomizationPath), v.DestinationPath)
+		if err != nil {
+			return fmt.Errorf("error while getting the resource relative path for the application secret: %w", err)
+		}
+		k.Resources = append(k.Resources, rel)
+		ky, err = yaml.ExportKustomization(k)
+		if err != nil {
+			return fmt.Errorf("error while exporting the kustomization for the application secret: %w", err)
+		}
+		err = yaml.Save(ky, filepath.Join(r.git.Path(), v.KustomizationPath))
+		if err != nil {
+			return fmt.Errorf("error while saving the kustomization file of the application secret: %w", err)
 		}
 	}
 	status.End(true)
