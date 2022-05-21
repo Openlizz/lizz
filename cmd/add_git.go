@@ -130,7 +130,10 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = applicationRepo.Render(status)
+	err = applicationRepo.Render(&repo.Repository{
+		URL:    addGitArgs.destinationUrl,
+		Branch: addArgs.destinationBranch,
+	}, addGitArgs.username, addGitArgs.password, status)
 	if err != nil {
 		return err
 	}
@@ -143,6 +146,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 		addArgs.authorEmail,
 		"[add application] Create application repository for "+applicationRepo.Config().Name,
 		addGitArgs.destinationUrl,
+		addArgs.destinationBranch,
 		rootArgs.timeout,
 		status,
 	)
@@ -190,6 +194,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 		addArgs.authorEmail,
 		"[add application] Add "+applicationRepo.Config().Name+" to the cluster",
 		"",
+		addArgs.fleetBranch,
 		rootArgs.timeout,
 		status,
 	)

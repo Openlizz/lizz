@@ -75,6 +75,7 @@ func envGitCmdRun(cmd *cobra.Command, args []string) error {
 		envArgs.authorEmail,
 		"[add env variable] Env "+envArgs.name+" added to the cluster configuration",
 		"",
+		envArgs.fleetBranch,
 		rootArgs.timeout,
 		status,
 	)

@@ -131,6 +131,7 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		secretManagementArgs.authorEmail,
 		"[configure secret management] Configure secret management using sops and age",
 		"",
+		secretManagementArgs.fleetBranch,
 		rootArgs.timeout,
 		status,
 	)

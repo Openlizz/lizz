@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
+	ignore "github.com/sabhiram/go-gitignore"
 	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
@@ -78,12 +80,13 @@ func (r *ApplicationRepo) CommitPush(
 	authorEmail string,
 	message string,
 	destinationUrl string,
+	destinationBranch string,
 	timeout time.Duration,
 	status *cli.Status,
 ) error {
 	status.Start("Commit and push to the application repository ")
 	defer status.End(false)
-	err := CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
+	err := CommitPush(r.git, authorName, authorEmail, message, destinationUrl, destinationBranch, timeout)
 	if err != nil {
 		return err
 	}
@@ -91,13 +94,16 @@ func (r *ApplicationRepo) CommitPush(
 	return nil
 }
 
-func (r *ApplicationRepo) Render(status *cli.Status) error {
+func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd string, status *cli.Status) error {
 	status.Start("Render the application values ")
 	defer status.End(false)
 	tv := make(map[string]interface{})
 	tv["name"] = r.config.Name
 	tv["namespace"] = r.config.Namespace
 	tv["serviceAccountName"] = r.config.ServiceAccountName
+	tv["repository"] = destinationRepo
+	tv["username"] = username
+	tv["password"] = pwd
 	for _, v := range r.config.Values.ApplicationDependencies {
 		for k := range tv {
 			if v.Name == k {
@@ -159,15 +165,8 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 		}
 		if info.IsDir() == false && strings.Index(path, ".git") == -1 {
 			blackListed := false
-			for _, blackListedPath := range append(r.config.TemplatingBlackList, "config.yaml") {
-				backListedInfo, err := os.Stat(filepath.Join(r.git.Path(), blackListedPath))
-				if err != nil {
-					return err
-				}
-				if os.SameFile(backListedInfo, info) {
-					blackListed = true
-				}
-			}
+			object := ignore.CompileIgnoreLines(append(r.config.TemplatingBlackList, "config.yaml")...)
+			blackListed = object.MatchesPath(strings.Replace(path, r.git.Path()+"/", "", -1))
 			if blackListed == false {
 				fps = append(fps, path)
 			}
@@ -182,7 +181,7 @@ func (r *ApplicationRepo) Render(status *cli.Status) error {
 		if err != nil {
 			return err
 		}
-		t := template.Must(template.New("applicationFile").Parse(string(data)))
+		t := template.Must(template.New("applicationFile").Funcs(sprig.FuncMap()).Parse(string(data)))
 		var tpl bytes.Buffer
 		err = t.Execute(&tpl, tv)
 		if err != nil {

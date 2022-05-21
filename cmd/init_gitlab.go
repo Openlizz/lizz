@@ -148,6 +148,7 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		initArgs.authorEmail,
 		"Initialize cluster repository",
 		destinationUrl,
+		initArgs.destinationBranch,
 		rootArgs.timeout,
 		status,
 	)

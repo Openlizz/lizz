@@ -365,12 +365,13 @@ func (r *ClusterRepo) CommitPush(
 	authorEmail string,
 	message string,
 	destinationUrl string,
+	destinationBranch string,
 	timeout time.Duration,
 	status *cli.Status,
 ) error {
 	status.Start("Commit and push to the cluster repository ")
 	defer status.End(false)
-	err := CommitPush(r.git, authorName, authorEmail, message, destinationUrl, timeout)
+	err := CommitPush(r.git, authorName, authorEmail, message, destinationUrl, destinationBranch, timeout)
 	if err != nil {
 		return err
 	}

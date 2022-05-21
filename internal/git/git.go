@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"io"
+
+	gogit "github.com/go-git/go-git/v5"
 )
 
 var (
@@ -41,6 +43,7 @@ type Commit struct {
 // Git is an interface for basic Git operations on a single branch of a
 // remote repository.
 type Git interface {
+	Repository() *gogit.Repository
 	Init(url, branch string) (bool, error)
 	Clone(ctx context.Context, url, branch string, caBundle []byte) (bool, error)
 	Write(path string, reader io.Reader) error

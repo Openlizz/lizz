@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/fluxcd/pkg/apis/meta"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	yaml2 "gopkg.in/yaml.v2"
@@ -177,7 +178,7 @@ func RenderApplicationConfig(
 	}
 	// render cluster values
 	for idx, clusterValue := range v.ClusterValues {
-		t := template.Must(template.New("clusterValue").Parse(clusterValue.Template))
+		t := template.Must(template.New("clusterValue").Funcs(sprig.FuncMap()).Parse(clusterValue.Template))
 		var tpl bytes.Buffer
 		err := t.Execute(&tpl, clusterConfig)
 		if err != nil {
@@ -208,10 +209,6 @@ func RenderApplicationConfig(
 		if repository.URL == "" && repository.Name == "" {
 			return &ApplicationConfig{}, fmt.Errorf("application repository of the application value with name '%s' not found", applicationValue.Name)
 		}
-		// URL, owner, repositoryName, err := ParseUniversalURL(repository)
-		// if err != nil {
-		// 	return &ApplicationConfig{}, fmt.Errorf("error in the application value with name %s: %w", applicationValue.Name, err)
-		// }
 		applicationCloneOptions := cloneOptions
 		applicationCloneOptions.URL = repository.URL
 		applicationCloneOptions.Owner = repository.Owner
@@ -233,7 +230,7 @@ func RenderApplicationConfig(
 		tv[applicationValue.Name] = value
 	}
 	// render the application configuration (without the values) with the template values
-	t := template.Must(template.New("applicationConfig").Parse(strings.ReplaceAll(string(y), vy, "")))
+	t := template.Must(template.New("applicationConfig").Funcs(sprig.FuncMap()).Parse(strings.ReplaceAll(string(y), vy, "")))
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, tv)
 	if err != nil {
@@ -264,10 +261,6 @@ func RenderApplicationConfig(
 		if repository.URL == "" && repository.Name == "" {
 			return &ApplicationConfig{}, fmt.Errorf("application repository of the application secret number %d not found", idx)
 		}
-		// URL, owner, repositoryName, err := ParseUniversalURL(repository)
-		// if err != nil {
-		// return &ApplicationConfig{}, fmt.Errorf("error in the application secret number %d: %w", idx, err)
-		// }
 		applicationCloneOptions := cloneOptions
 		applicationCloneOptions.URL = repository.URL
 		applicationCloneOptions.Owner = repository.Owner

@@ -125,6 +125,7 @@ func envGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		removeArgs.authorEmail,
 		"[add env variable] Env "+envArgs.name+" added to the cluster configuration",
 		"",
+		envArgs.fleetBranch,
 		rootArgs.timeout,
 		status,
 	)

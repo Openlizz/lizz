@@ -75,6 +75,7 @@ func removeGitCmdRun(cmd *cobra.Command, args []string) error {
 		removeArgs.authorEmail,
 		"[remove application] Remove "+removeArgs.applicationName+" from the cluster",
 		"",
+		removeArgs.fleetBranch,
 		rootArgs.timeout,
 		status,
 	)

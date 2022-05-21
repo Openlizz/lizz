@@ -79,6 +79,7 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 		initArgs.authorEmail,
 		"Initialize cluster repository",
 		initGitArgs.destinationUrl,
+		initArgs.destinationBranch,
 		rootArgs.timeout,
 		status,
 	)

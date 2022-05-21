@@ -11,6 +11,8 @@ import (
 
 	"github.com/fluxcd/go-git-providers/gitprovider"
 	gogitv5 "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -151,15 +153,57 @@ func Clone(options *CloneOptions) (*gogit.GoGit, error) {
 	return git, nil
 }
 
+func checkout(g *gogit.GoGit, branch, remote string) (plumbing.ReferenceName, error) {
+	branchRef := plumbing.NewBranchReferenceName(branch)
+	if err := g.Repository().CreateBranch(&config.Branch{
+		Name:   branch,
+		Remote: remote,
+		Merge:  branchRef,
+	}); err != nil {
+		if err.Error() != "branch already exists" {
+			return "", err
+		} else {
+			return branchRef, nil
+		}
+
+	}
+	// PlainInit assumes the initial branch to always be master, we can
+	// overwrite this by setting the reference of the Storer to a new
+	// symbolic reference (as there are no commits yet) that points
+	// the HEAD to our new branch.
+	if err := g.Repository().Storer.SetReference(plumbing.NewSymbolicReference(plumbing.HEAD, branchRef)); err != nil {
+		return "", err
+	}
+	return branchRef, nil
+}
+
 func CommitPush(
 	g *gogit.GoGit,
 	authorName string,
 	authorEmail string,
 	message string,
 	destinationUrl string,
+	destinationBranch string,
 	timeout time.Duration,
 ) error {
-	_, err := g.Commit(git.Commit{
+	var remoteName string
+	var err error
+	if destinationUrl == "" {
+		remoteName = gogitv5.DefaultRemoteName
+	} else {
+		remoteName, err = g.CreateRemote(destinationUrl, "destination")
+		if err != nil {
+			return err
+		}
+	}
+	branchRef, err := checkout(g, destinationBranch, remoteName)
+	if err != nil {
+		return fmt.Errorf("failed to checkout: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var caBundle []byte
+	_, err = g.Commit(git.Commit{
 		Author: git.Author{
 			Name:  authorName,
 			Email: authorEmail,
@@ -169,21 +213,9 @@ func CommitPush(
 	if err != nil && err != git.ErrNoStagedFiles {
 		return fmt.Errorf("failed to commit: %w", err)
 	}
-	var remoteName string
-	if destinationUrl == "" {
-		remoteName = gogitv5.DefaultRemoteName
-	} else {
-		remoteName, err = g.CreateRemote(destinationUrl, "destination")
-		if err != nil {
-			return err
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	var caBundle []byte
-	err = g.Push(ctx, remoteName, caBundle)
+	err = g.Push(ctx, remoteName, []config.RefSpec{config.RefSpec(branchRef + ":" + branchRef)}, caBundle)
 	if err != nil {
-		if err.Error() != "non-fast-forward update: refs/heads/main" &&
+		if err.Error() != fmt.Sprintf("non-fast-forward update: %s", branchRef) &&
 			err.Error() != "already up-to-date" {
 			return fmt.Errorf("failed to push: %w", err)
 		}

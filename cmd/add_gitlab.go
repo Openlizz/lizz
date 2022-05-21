@@ -203,7 +203,11 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = applicationRepo.Render(status)
+	err = applicationRepo.Render(&repo.Repository{
+		Owner:  addGitlabArgs.owner,
+		Name:   addGitlabArgs.destination,
+		Branch: addArgs.destinationBranch,
+	}, addGitlabArgs.owner, glToken, status)
 	if err != nil {
 		return err
 	}
@@ -236,6 +240,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		addArgs.authorEmail,
 		"[add application] Create application repository for "+applicationRepo.Config().Name,
 		destinationUrl,
+		addArgs.destinationBranch,
 		rootArgs.timeout,
 		status,
 	)
@@ -283,6 +288,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		addArgs.authorEmail,
 		"[add application] Add "+applicationRepo.Config().Name+" to the cluster",
 		"",
+		addArgs.fleetBranch,
 		rootArgs.timeout,
 		status,
 	)

@@ -56,6 +56,10 @@ func New(path string, auth transport.AuthMethod) *GoGit {
 	}
 }
 
+func (g *GoGit) Repository() *gogit.Repository {
+	return g.repository
+}
+
 func (g *GoGit) Init(url, branch string) (bool, error) {
 	if g.repository != nil {
 		return false, nil
@@ -220,12 +224,13 @@ func (g *GoGit) Commit(message git.Commit, opts ...git.Option) (string, error) {
 	return commit.String(), nil
 }
 
-func (g *GoGit) Push(ctx context.Context, remoteName string, caBundle []byte) error {
+func (g *GoGit) Push(ctx context.Context, remoteName string, refSpecs []config.RefSpec, caBundle []byte) error {
 	if g.repository == nil {
 		return git.ErrNoGitRepository
 	}
 	return g.repository.PushContext(ctx, &gogit.PushOptions{
 		RemoteName: remoteName,
+		RefSpecs:   refSpecs,
 		Auth:       g.auth,
 		Progress:   nil,
 		CABundle:   caBundle,
