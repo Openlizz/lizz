@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/sprig/v3"
 	ignore "github.com/sabhiram/go-gitignore"
 	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
@@ -181,7 +180,7 @@ func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd stri
 		if err != nil {
 			return err
 		}
-		t := template.Must(template.New("applicationFile").Funcs(sprig.FuncMap()).Parse(string(data)))
+		t = template.Must(template.New("applicationFile").Funcs(funcMap()).Parse(string(data)))
 		var tpl bytes.Buffer
 		err = t.Execute(&tpl, tv)
 		if err != nil {
