@@ -17,11 +17,11 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/openlizz/lizz/internal/gitlab"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
@@ -49,7 +49,7 @@ func init() {
 	removeGitlabCmd.Flags().StringVar(&removeGitlabArgs.fleet, "fleet", "", "GitLab repository name where to push the application repository")
 	removeGitlabCmd.Flags().StringSliceVar(&removeGitlabArgs.teams, "team", []string{}, "GitLab teams to be given maintainer access (also accepts comma-separated values)")
 	removeGitlabCmd.Flags().BoolVar(&removeGitlabArgs.personal, "personal", false, "if true, the owner is assumed to be a GitLab user; otherwise a group")
-	removeGitlabCmd.Flags().StringVar(&removeGitlabArgs.hostname, "hostname", glDefaultDomain, "GitLab hostname")
+	removeGitlabCmd.Flags().StringVar(&removeGitlabArgs.hostname, "hostname", gitlab.DefaultDomain, "GitLab hostname")
 	removeGitlabCmd.Flags().BoolVar(&removeGitlabArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
 
 	removeCmd.AddCommand(removeGitlabCmd)
@@ -58,16 +58,12 @@ func init() {
 func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Remove application...")
 
-	glToken := os.Getenv(glTokenEnvVar)
-	if glToken == "" {
-		var err error
-		glToken, err = readPasswordFromStdin("Please enter your GitLab personal access token (PAT): ")
-		if err != nil {
-			return fmt.Errorf("could not read token: %w", err)
-		}
+	glToken, err := gitlab.GetToken()
+	if err != nil {
+		return err
 	}
 
-	if projectNameIsValid, err := regexp.MatchString(gitlabProjectRegex, removeGitlabArgs.fleet); err != nil || !projectNameIsValid {
+	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, removeGitlabArgs.fleet); err != nil || !projectNameIsValid {
 		if err == nil {
 			err = fmt.Errorf(
 				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
@@ -84,7 +80,7 @@ func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Token:    glToken,
 	}
 	// Workaround for: https://github.com/fluxcd/go-git-providers/issues/55
-	if hostname := providerCfg.Hostname; hostname != glDefaultDomain &&
+	if hostname := providerCfg.Hostname; hostname != gitlab.DefaultDomain &&
 		!strings.HasPrefix(hostname, "https://") &&
 		!strings.HasPrefix(hostname, "http://") {
 		providerCfg.Hostname = "https://" + providerCfg.Hostname
@@ -104,7 +100,7 @@ func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Timeout:        rootArgs.timeout,
 			Personal:       removeGitlabArgs.personal,
 			Reconcile:      removeGitlabArgs.reconcile,
-			Teams:          mapTeamSlice(removeGitlabArgs.teams, glDefaultPermission),
+			Teams:          mapTeamSlice(removeGitlabArgs.teams, gitlab.DefaultPermission),
 			Provider:       providerClient,
 		},
 		status,

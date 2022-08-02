@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/openlizz/lizz/internal/gitlab"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
@@ -49,7 +50,7 @@ func init() {
 	initGitlabCmd.Flags().StringVar(&initGitlabArgs.destination, "destination", "", "GitLab repository name where to push the application repository")
 	initGitlabCmd.Flags().StringSliceVar(&initGitlabArgs.teams, "team", []string{}, "GitLab teams to be given maintainer access (also accepts comma-separated values)")
 	initGitlabCmd.Flags().BoolVar(&initGitlabArgs.personal, "personal", false, "if true, the owner is assumed to be a GitLab user; otherwise a group")
-	initGitlabCmd.Flags().StringVar(&initGitlabArgs.hostname, "hostname", glDefaultDomain, "GitLab hostname")
+	initGitlabCmd.Flags().StringVar(&initGitlabArgs.hostname, "hostname", gitlab.DefaultDomain, "GitLab hostname")
 	initGitlabCmd.Flags().BoolVar(&initGitlabArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
 
 	initCmd.AddCommand(initGitlabCmd)
@@ -58,16 +59,12 @@ func init() {
 func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Initialize the cluster repository...")
 
-	glToken := os.Getenv(glTokenEnvVar)
-	if glToken == "" {
-		var err error
-		glToken, err = readPasswordFromStdin("Please enter your GitLab personal access token (PAT): ")
-		if err != nil {
-			return fmt.Errorf("could not read token: %w", err)
-		}
+	glToken, err := gitlab.GetToken()
+	if err != nil {
+		return err
 	}
 
-	if projectNameIsValid, err := regexp.MatchString(gitlabProjectRegex, initGitlabArgs.destination); err != nil || !projectNameIsValid {
+	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, initGitlabArgs.destination); err != nil || !projectNameIsValid {
 		if err == nil {
 			err = fmt.Errorf(
 				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
@@ -94,7 +91,7 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		CaBundle: caBundle,
 	}
 	// Workaround for: https://github.com/fluxcd/go-git-providers/issues/55
-	if hostname := providerCfg.Hostname; hostname != glDefaultDomain &&
+	if hostname := providerCfg.Hostname; hostname != gitlab.DefaultDomain &&
 		!strings.HasPrefix(hostname, "https://") &&
 		!strings.HasPrefix(hostname, "http://") {
 		providerCfg.Hostname = "https://" + providerCfg.Hostname
@@ -135,7 +132,7 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Timeout:        rootArgs.timeout,
 		Personal:       initGitlabArgs.personal,
 		Reconcile:      initGitlabArgs.reconcile,
-		Teams:          mapTeamSlice(initGitlabArgs.teams, glDefaultPermission),
+		Teams:          mapTeamSlice(initGitlabArgs.teams, gitlab.DefaultPermission),
 		SshHostname:    addArgs.sshHostname,
 		Provider:       providerClient,
 	}, status)

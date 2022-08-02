@@ -26,6 +26,7 @@ import (
 
 	"github.com/fluxcd/go-git-providers/gitprovider"
 	"github.com/spf13/cobra"
+	"gitlab.com/openlizz/lizz/internal/gitlab"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 	"gitlab.com/openlizz/lizz/internal/yaml"
@@ -37,13 +38,6 @@ var addGitlabCmd = &cobra.Command{
 	Long:  ``,
 	RunE:  addGitlabCmdRun,
 }
-
-const (
-	glDefaultPermission = "maintain"
-	glDefaultDomain     = "gitlab.com"
-	glTokenEnvVar       = "GITLAB_TOKEN"
-	gitlabProjectRegex  = `\A[[:alnum:]\x{00A9}-\x{1f9ff}_][[:alnum:]\p{Pd}\x{00A9}-\x{1f9ff}_\.]*\z`
-)
 
 type addGitlabFlags struct {
 	owner        string
@@ -66,7 +60,7 @@ func init() {
 	addGitlabCmd.Flags().StringSliceVar(&addGitlabArgs.teams, "team", []string{}, "GitLab teams to be given maintainer access (also accepts comma-separated values)")
 	addGitlabCmd.Flags().BoolVar(&addGitlabArgs.personal, "personal", false, "if true, the owner is assumed to be a GitLab user; otherwise a group")
 	addGitlabCmd.Flags().DurationVar(&addGitlabArgs.interval, "interval", time.Minute, "sync interval")
-	addGitlabCmd.Flags().StringVar(&addGitlabArgs.hostname, "hostname", glDefaultDomain, "GitLab hostname")
+	addGitlabCmd.Flags().StringVar(&addGitlabArgs.hostname, "hostname", gitlab.DefaultDomain, "GitLab hostname")
 	addGitlabCmd.Flags().BoolVar(&addGitlabArgs.readWriteKey, "read-write-key", false, "if true, the deploy key is configured with read/write permissions")
 	addGitlabCmd.Flags().BoolVar(&addGitlabArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
 
@@ -76,16 +70,12 @@ func init() {
 func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Add new application...")
 
-	glToken := os.Getenv(glTokenEnvVar)
-	if glToken == "" {
-		var err error
-		glToken, err = readPasswordFromStdin("Please enter your GitLab personal access token (PAT): ")
-		if err != nil {
-			return fmt.Errorf("could not read token: %w", err)
-		}
+	glToken, err := gitlab.GetToken()
+	if err != nil {
+		return err
 	}
 
-	if projectNameIsValid, err := regexp.MatchString(gitlabProjectRegex, addGitlabArgs.fleet); err != nil || !projectNameIsValid {
+	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, addGitlabArgs.fleet); err != nil || !projectNameIsValid {
 		if err == nil {
 			err = fmt.Errorf(
 				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
@@ -94,7 +84,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
-	if projectNameIsValid, err := regexp.MatchString(gitlabProjectRegex, addGitlabArgs.destination); err != nil || !projectNameIsValid {
+	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, addGitlabArgs.destination); err != nil || !projectNameIsValid {
 		if err == nil {
 			err = fmt.Errorf(
 				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
@@ -121,7 +111,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		CaBundle: caBundle,
 	}
 	// Workaround for: https://github.com/fluxcd/go-git-providers/issues/55
-	if hostname := providerCfg.Hostname; hostname != glDefaultDomain &&
+	if hostname := providerCfg.Hostname; hostname != gitlab.DefaultDomain &&
 		!strings.HasPrefix(hostname, "https://") &&
 		!strings.HasPrefix(hostname, "http://") {
 		providerCfg.Hostname = "https://" + providerCfg.Hostname
@@ -159,7 +149,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Timeout:        rootArgs.timeout,
 			Personal:       addGitlabArgs.personal,
 			Reconcile:      addGitlabArgs.reconcile,
-			Teams:          mapTeamSlice(addGitlabArgs.teams, glDefaultPermission),
+			Teams:          mapTeamSlice(addGitlabArgs.teams, gitlab.DefaultPermission),
 			CaBundle:       caBundle,
 			SshHostname:    addArgs.sshHostname,
 			Provider:       providerClient,
@@ -179,7 +169,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Timeout:     rootArgs.timeout,
 		Personal:    addGitlabArgs.personal,
 		Reconcile:   addGitlabArgs.reconcile,
-		Teams:       mapTeamSlice(addGitlabArgs.teams, glDefaultPermission),
+		Teams:       mapTeamSlice(addGitlabArgs.teams, gitlab.DefaultPermission),
 		CaBundle:    caBundle,
 		SshHostname: addArgs.sshHostname,
 		Provider:    providerClient,
@@ -227,7 +217,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Timeout:        rootArgs.timeout,
 		Personal:       addGitlabArgs.personal,
 		Reconcile:      addGitlabArgs.reconcile,
-		Teams:          mapTeamSlice(addGitlabArgs.teams, glDefaultPermission),
+		Teams:          mapTeamSlice(addGitlabArgs.teams, gitlab.DefaultPermission),
 		SshHostname:    addArgs.sshHostname,
 		Provider:       providerClient,
 	}, status)

@@ -17,12 +17,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"gitlab.com/openlizz/lizz/internal/gitlab"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
@@ -50,7 +50,7 @@ func init() {
 	secretManagementGitlabCmd.Flags().StringVar(&secretManagementGitlabArgs.fleet, "fleet", "", "GitLab repository name where to push the application repository")
 	secretManagementGitlabCmd.Flags().StringSliceVar(&secretManagementGitlabArgs.teams, "team", []string{}, "GitLab teams to be given maintainer access (also accepts comma-separated values)")
 	secretManagementGitlabCmd.Flags().BoolVar(&secretManagementGitlabArgs.personal, "personal", false, "if true, the owner is assumed to be a GitLab user; otherwise a group")
-	secretManagementGitlabCmd.Flags().StringVar(&secretManagementGitlabArgs.hostname, "hostname", glDefaultDomain, "GitLab hostname")
+	secretManagementGitlabCmd.Flags().StringVar(&secretManagementGitlabArgs.hostname, "hostname", gitlab.DefaultDomain, "GitLab hostname")
 	secretManagementGitlabCmd.Flags().BoolVar(&secretManagementGitlabArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
 
 	secretManagementCmd.AddCommand(secretManagementGitlabCmd)
@@ -59,16 +59,12 @@ func init() {
 func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Configure secret management...")
 
-	glToken := os.Getenv(glTokenEnvVar)
-	if glToken == "" {
-		var err error
-		glToken, err = readPasswordFromStdin("Please enter your GitLab personal access token (PAT): ")
-		if err != nil {
-			return fmt.Errorf("could not read token: %w", err)
-		}
+	glToken, err := gitlab.GetToken()
+	if err != nil {
+		return err
 	}
 
-	if projectNameIsValid, err := regexp.MatchString(gitlabProjectRegex, secretManagementGitlabArgs.fleet); err != nil || !projectNameIsValid {
+	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, secretManagementGitlabArgs.fleet); err != nil || !projectNameIsValid {
 		if err == nil {
 			err = fmt.Errorf(
 				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
@@ -85,7 +81,7 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		Token:    glToken,
 	}
 	// Workaround for: https://github.com/fluxcd/go-git-providers/issues/55
-	if hostname := providerCfg.Hostname; hostname != glDefaultDomain &&
+	if hostname := providerCfg.Hostname; hostname != gitlab.DefaultDomain &&
 		!strings.HasPrefix(hostname, "https://") &&
 		!strings.HasPrefix(hostname, "http://") {
 		providerCfg.Hostname = "https://" + providerCfg.Hostname
@@ -105,7 +101,7 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Timeout:        rootArgs.timeout,
 			Personal:       secretManagementGitlabArgs.personal,
 			Reconcile:      secretManagementGitlabArgs.reconcile,
-			Teams:          mapTeamSlice(secretManagementGitlabArgs.teams, glDefaultPermission),
+			Teams:          mapTeamSlice(secretManagementGitlabArgs.teams, gitlab.DefaultPermission),
 			Provider:       providerClient,
 		},
 		status,
