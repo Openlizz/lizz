@@ -26,6 +26,13 @@ type ApplicationDependency struct {
 	Value       bool   `json:"value,omitempty"`
 }
 
+type UserValue struct {
+	Name       string `json:"name"`
+	Required   bool   `json:"required,omitempty"`
+	Encryption bool   `json:"encryption,omitempty"`
+	Value      string `json:"value,omitempty"`
+}
+
 type ClusterValue struct {
 	Name        string `json:"name"`
 	Required    bool   `json:"required,omitempty"`
@@ -176,6 +183,18 @@ func RenderApplicationConfig(
 			}
 		}
 	}
+	// render user values
+	// for idx, userValue := range v.UserValues {
+	// 	value := xxx[userValue.Name]
+	// 	if userValue.Required == true && value == "" {
+	// 		return &ApplicationConfig{}, fmt.Errorf(
+	// 			"user value with name '%s' and template '%s' cannot be resolved and is required for the application",
+	// 			userValue.Name,
+	// 			userValue.Template,
+	// 		)
+	// 	}
+	// 	v.userValues[idx].Value = tpl.String()
+	// 	tv[userValue.Name] = tpl.String()
 	// render cluster values
 	for idx, clusterValue := range v.ClusterValues {
 		t := template.Must(template.New("clusterValue").Funcs(sprig.FuncMap()).Parse(clusterValue.Template))

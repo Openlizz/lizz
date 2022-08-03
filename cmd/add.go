@@ -61,18 +61,18 @@ type addFlags struct {
 var addArgs addFlags
 
 func init() {
-	addCmd.PersistentFlags().StringVar(&addArgs.applicationName, "name", "", "Name of the application to add (default to the name of the application)")
-	addCmd.PersistentFlags().StringVar(&addArgs.applicationNamespace, "namespace", "", "Namespace where to add the application (default to the name of the application)")
+	addCmd.PersistentFlags().StringVar(&addArgs.applicationName, "name", "", "name of the application to add (default to the name of the application)")
+	addCmd.PersistentFlags().StringVar(&addArgs.applicationNamespace, "namespace", "", "namespace where to add the application (default to the name of the application)")
 	addCmd.PersistentFlags().StringVar(&addArgs.originUrl, "origin-url", "", "Git repository URL where the application is located")
 	addCmd.PersistentFlags().StringVar(&addArgs.originBranch, "origin-branch", "main", "Git branch of the application origin repository")
-	addCmd.PersistentFlags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "assumes the deploy key is already setup, skips confirmation")
+	addCmd.PersistentFlags().BoolVar(&addArgs.clusterRole, "cluster-role", false, "if true, the service account used has permissions for the all cluster")
 	addCmd.PersistentFlags().StringVar(&addArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
 	addCmd.PersistentFlags().StringVar(&addArgs.path, "path", "./default", "path to kustomization in the application repository")
 	addCmd.PersistentFlags().StringVar(&addArgs.destinationBranch, "destination-branch", "main", "Git branch of the destination repository")
 	addCmd.PersistentFlags().BoolVar(&addArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private")
 	addCmd.PersistentFlags().StringVar(&addArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
 	addCmd.PersistentFlags().DurationVar(&addArgs.interval, "interval", time.Minute, "sync interval")
-	addCmd.PersistentFlags().StringVar(&addArgs.sourceSecretName, "sourcesecret-name", "sourcesecret", "Name of the source secret containing the credentials for the desctionation repository")
+	addCmd.PersistentFlags().StringVar(&addArgs.sourceSecretName, "sourcesecret-name", "sourcesecret", "name of the source secret containing the credentials for the destination repository")
 	addCmd.PersistentFlags().BoolVar(&addArgs.tokenAuth, "token-auth", false, "when enabled, the personal access token will be used instead of SSH deploy key")
 	addCmd.PersistentFlags().Var(&addArgs.keyAlgorithm, "ssh-key-algorithm", addArgs.keyAlgorithm.Description())
 	addCmd.PersistentFlags().Var(&addArgs.keyRSABits, "ssh-rsa-bits", addArgs.keyRSABits.Description())

@@ -36,7 +36,7 @@ type removeFlags struct {
 var removeArgs removeFlags
 
 func init() {
-	removeCmd.PersistentFlags().StringVar(&removeArgs.applicationName, "name", "", "Name of the application to remove")
+	removeCmd.PersistentFlags().StringVar(&removeArgs.applicationName, "name", "", "name of the application to remove")
 	removeCmd.PersistentFlags().StringVar(&removeArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
 
 	removeCmd.PersistentFlags().StringVar(&removeArgs.authorName, "author-name", "Lizz", "author name for Git commits")

@@ -37,8 +37,8 @@ type envFlags struct {
 var envArgs envFlags
 
 func init() {
-	envCmd.PersistentFlags().StringVar(&envArgs.name, "name", "", "Name of the env variable to add")
-	envCmd.PersistentFlags().StringVar(&envArgs.value, "value", "", "Value of the env variable to add")
+	envCmd.PersistentFlags().StringVar(&envArgs.name, "name", "", "name of the env variable to add")
+	envCmd.PersistentFlags().StringVar(&envArgs.value, "value", "", "value of the env variable to add")
 	envCmd.PersistentFlags().StringVar(&envArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
 
 	envCmd.PersistentFlags().StringVar(&envArgs.authorName, "author-name", "Lizz", "author name for Git commits")
