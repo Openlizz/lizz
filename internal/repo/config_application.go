@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/fluxcd/pkg/apis/meta"
 	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
@@ -209,7 +208,7 @@ func RenderApplicationConfig(
 			tv[clusterValue.Name] = value
 			continue
 		}
-		t := template.Must(template.New("clusterValue").Funcs(sprig.FuncMap()).Parse(clusterValue.Template))
+		t := template.Must(template.New("clusterValue").Funcs(funcMap()).Parse(clusterValue.Template))
 		var tpl bytes.Buffer
 		err := t.Execute(&tpl, clusterConfig)
 		if err != nil {
@@ -295,7 +294,7 @@ func RenderApplicationConfig(
 		tv[pwd.Name] = value
 	}
 	// render the application configuration (without the values) with the template values
-	t := template.Must(template.New("applicationConfig").Funcs(sprig.FuncMap()).Parse(strings.ReplaceAll(string(y), vy, "")))
+	t = template.Must(template.New("applicationConfig").Funcs(funcMap()).Parse(strings.ReplaceAll(string(y), vy, "")))
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, tv)
 	if err != nil {
