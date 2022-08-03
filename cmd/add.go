@@ -16,11 +16,13 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/openlizz/lizz/internal/flags"
+	"helm.sh/helm/v3/pkg/strvals"
 )
 
 var addCmd = &cobra.Command{
@@ -44,6 +46,7 @@ type addFlags struct {
 	destinationBranch    string
 	destinationPrivate   bool
 	fleetBranch          string
+	values               []string
 	interval             time.Duration
 	sourceSecretName     string
 	tokenAuth            bool
@@ -71,6 +74,7 @@ func init() {
 	addCmd.PersistentFlags().StringVar(&addArgs.destinationBranch, "destination-branch", "main", "Git branch of the destination repository")
 	addCmd.PersistentFlags().BoolVar(&addArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private")
 	addCmd.PersistentFlags().StringVar(&addArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
+	addCmd.PersistentFlags().StringArrayVar(&addArgs.values, "set-value", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 	addCmd.PersistentFlags().DurationVar(&addArgs.interval, "interval", time.Minute, "sync interval")
 	addCmd.PersistentFlags().StringVar(&addArgs.sourceSecretName, "sourcesecret-name", "sourcesecret", "name of the source secret containing the credentials for the destination repository")
 	addCmd.PersistentFlags().BoolVar(&addArgs.tokenAuth, "token-auth", false, "when enabled, the personal access token will be used instead of SSH deploy key")
@@ -95,6 +99,21 @@ func mapTeamSlice(s []string, defaultPermission string) map[string]string {
 			m[s[0]] = s[1]
 		}
 	}
-
 	return m
+}
+
+func parseValues(values []string) (map[string]interface{}, error) {
+	base := map[string]interface{}{}
+	for _, value := range values {
+		if err := strvals.ParseInto(value, base); err != nil {
+			return nil, fmt.Errorf("failed parsing --set-value data: %w", err)
+		}
+	}
+	// check that there is no two levels values which is not expected
+	for _, value := range base {
+		if _, ok := value.(string); !ok {
+			return nil, fmt.Errorf("a two level value is passed in --set-value which is not expected. The two level value is %v", value)
+		}
+	}
+	return base, nil
 }
