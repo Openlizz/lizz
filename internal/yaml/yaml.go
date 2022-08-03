@@ -55,7 +55,8 @@ func EncryptYaml(fileName string, keyP string) (string, error) {
 	svcs := []keyservice.KeyServiceClient{
 		keyservice.NewLocalClient(),
 	}
-	key, err := age.MasterKeyFromRecipient(keyP)
+	masterKeys, err := age.MasterKeysFromRecipients(keyP)
+	key := masterKeys[0]
 	if err != nil {
 		return "", err
 	}
