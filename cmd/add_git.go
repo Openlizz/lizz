@@ -105,12 +105,17 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), &repo.CloneOptions{
-		Username:       addGitArgs.username,
-		Password:       addGitArgs.password,
-		PrivateKeyFile: addGitArgs.privateKeyFile,
-		Timeout:        rootArgs.timeout,
-	}, status)
+	err = applicationRepo.RenderApplicationConfig(
+		addArgs.values,
+		clusterRepo.Config(),
+		&repo.CloneOptions{
+			Username:       addGitArgs.username,
+			Password:       addGitArgs.password,
+			PrivateKeyFile: addGitArgs.privateKeyFile,
+			Timeout:        rootArgs.timeout,
+		},
+		status,
+	)
 	if err != nil {
 		return err
 	}

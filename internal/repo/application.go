@@ -2,7 +2,6 @@ package repo
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"html/template"
 	"os"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	ignore "github.com/sabhiram/go-gitignore"
-	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	"gitlab.com/openlizz/lizz/internal/yaml"
@@ -58,11 +56,12 @@ func (r *ApplicationRepo) OpenApplicationConfig() error {
 	return nil
 }
 
-func (r *ApplicationRepo) RenderApplicationConfig(clusterConfig *ClusterConfig, cloneOptions *CloneOptions, status *cli.Status) error {
+func (r *ApplicationRepo) RenderApplicationConfig(values []string, clusterConfig *ClusterConfig, cloneOptions *CloneOptions, status *cli.Status) error {
 	status.Start("Render the application configuration ")
 	defer status.End(false)
 	c, err := RenderApplicationConfig(
 		filepath.Join(r.git.Path(), "config.yaml"),
+		values,
 		clusterConfig,
 		cloneOptions,
 		status,
@@ -107,7 +106,7 @@ func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd stri
 	for _, v := range r.config.Values.ApplicationDependencies {
 		for k := range tv {
 			if v.Name == k {
-				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[v.Name] = v.Value
@@ -118,7 +117,15 @@ func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd stri
 	for _, v := range r.config.Values.ApplicationValues {
 		for k := range tv {
 			if v.Name == k {
-				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+			}
+		}
+		tv[v.Name] = v.Value
+	}
+	for _, v := range r.config.Values.UserValues {
+		for k := range tv {
+			if v.Name == k {
+				return fmt.Errorf("value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[v.Name] = v.Value
@@ -126,7 +133,7 @@ func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd stri
 	for _, v := range r.config.Values.ClusterValues {
 		for k := range tv {
 			if v.Name == k {
-				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+				return fmt.Errorf("value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
 		tv[v.Name] = v.Value
@@ -134,29 +141,16 @@ func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd stri
 			status.PrintValue(v.Name, v.Description, tv[v.Name])
 		}
 	}
-	for _, pwd := range r.config.Values.Passwords {
-		res, err := password.Generate(
-			pwd.Lenght,
-			pwd.NumDigits,
-			pwd.NumSymbols,
-			pwd.NoUpper,
-			pwd.AllowRepeat,
-		)
-		if err != nil {
-			return err
-		}
-		if pwd.Print == true {
-			status.PrintValue(pwd.Name, pwd.Description, res)
-		}
-		if pwd.Base64 == true {
-			res = base64.StdEncoding.EncodeToString([]byte(res))
-		}
+	for _, v := range r.config.Values.Passwords {
 		for k := range tv {
-			if pwd.Name == k {
-				return fmt.Errorf("application value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
+			if v.Name == k {
+				return fmt.Errorf("value name already taken. '%s' already has the value: '%s'. Please use another name.", k, tv[k])
 			}
 		}
-		tv[pwd.Name] = res
+		tv[v.Name] = v.Value
+		if v.Print == true {
+			status.PrintValue(v.Name, v.Description, tv[v.Name])
+		}
 	}
 	var fps []string
 	err := filepath.Walk(r.git.Path(), func(path string, info os.FileInfo, err error) error {

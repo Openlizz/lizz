@@ -163,17 +163,22 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = applicationRepo.RenderApplicationConfig(clusterRepo.Config(), &repo.CloneOptions{
-		Username:    addGitlabArgs.owner,
-		Password:    glToken,
-		Timeout:     rootArgs.timeout,
-		Personal:    addGitlabArgs.personal,
-		Reconcile:   addGitlabArgs.reconcile,
-		Teams:       mapTeamSlice(addGitlabArgs.teams, gitlab.DefaultPermission),
-		CaBundle:    caBundle,
-		SshHostname: addArgs.sshHostname,
-		Provider:    providerClient,
-	}, status)
+	err = applicationRepo.RenderApplicationConfig(
+		addArgs.values,
+		clusterRepo.Config(),
+		&repo.CloneOptions{
+			Username:    addGitlabArgs.owner,
+			Password:    glToken,
+			Timeout:     rootArgs.timeout,
+			Personal:    addGitlabArgs.personal,
+			Reconcile:   addGitlabArgs.reconcile,
+			Teams:       mapTeamSlice(addGitlabArgs.teams, gitlab.DefaultPermission),
+			CaBundle:    caBundle,
+			SshHostname: addArgs.sshHostname,
+			Provider:    providerClient,
+		},
+		status,
+	)
 	if err != nil {
 		return err
 	}

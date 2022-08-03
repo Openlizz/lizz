@@ -16,13 +16,11 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/openlizz/lizz/internal/flags"
-	"helm.sh/helm/v3/pkg/strvals"
 )
 
 var addCmd = &cobra.Command{
@@ -100,20 +98,4 @@ func mapTeamSlice(s []string, defaultPermission string) map[string]string {
 		}
 	}
 	return m
-}
-
-func parseValues(values []string) (map[string]interface{}, error) {
-	base := map[string]interface{}{}
-	for _, value := range values {
-		if err := strvals.ParseInto(value, base); err != nil {
-			return nil, fmt.Errorf("failed parsing --set-value data: %w", err)
-		}
-	}
-	// check that there is no two levels values which is not expected
-	for _, value := range base {
-		if _, ok := value.(string); !ok {
-			return nil, fmt.Errorf("a two level value is passed in --set-value which is not expected. The two level value is %v", value)
-		}
-	}
-	return base, nil
 }

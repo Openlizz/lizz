@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"net/url"
@@ -12,8 +13,10 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/fluxcd/pkg/apis/meta"
+	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
 	yaml2 "gopkg.in/yaml.v2"
+	"helm.sh/helm/v3/pkg/strvals"
 	"sigs.k8s.io/yaml"
 )
 
@@ -27,19 +30,18 @@ type ApplicationDependency struct {
 }
 
 type UserValue struct {
-	Name       string `json:"name"`
-	Required   bool   `json:"required,omitempty"`
-	Encryption bool   `json:"encryption,omitempty"`
-	Value      string `json:"value,omitempty"`
+	Name     string      `json:"name"`
+	Required bool        `json:"required,omitempty"`
+	Value    interface{} `json:"value,omitempty"`
 }
 
 type ClusterValue struct {
-	Name        string `json:"name"`
-	Required    bool   `json:"required,omitempty"`
-	Description string `json:"description,omitempty"`
-	Print       bool   `json:"print,omitempty"`
-	Template    string `json:"template,omitempty"`
-	Value       string `json:"value,omitempty"`
+	Name        string      `json:"name"`
+	Required    bool        `json:"required,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Print       bool        `json:"print,omitempty"`
+	Template    string      `json:"template,omitempty"`
+	Value       interface{} `json:"value,omitempty"`
 }
 
 type ApplicationValue struct {
@@ -59,19 +61,21 @@ type ApplicationSecret struct {
 }
 
 type Password struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Print       bool   `json:"print,omitempty"`
-	Lenght      int    `json:"length,omitempty"`
-	NumDigits   int    `json:"numDigits,omitempty"`
-	NumSymbols  int    `json:"numSymbols,omitempty"`
-	NoUpper     bool   `json:"noUpper,omitempty"`
-	AllowRepeat bool   `json:"allowRepeat,omitempty"`
-	Base64      bool   `json:"base64,omitempty"`
+	Name        string      `json:"name"`
+	Description string      `json:"description,omitempty"`
+	Print       bool        `json:"print,omitempty"`
+	Lenght      int         `json:"length,omitempty"`
+	NumDigits   int         `json:"numDigits,omitempty"`
+	NumSymbols  int         `json:"numSymbols,omitempty"`
+	NoUpper     bool        `json:"noUpper,omitempty"`
+	AllowRepeat bool        `json:"allowRepeat,omitempty"`
+	Base64      bool        `json:"base64,omitempty"`
+	Value       interface{} `json:"value,omitempty"`
 }
 
 type Values struct {
 	ApplicationDependencies []ApplicationDependency `json:"applicationDependencies,omitempty"`
+	UserValues              []UserValue             `json:"userValues,omitempty"`
 	ClusterValues           []ClusterValue          `json:"clusterValues,omitempty"`
 	ApplicationValues       []ApplicationValue      `json:"applicationValues,omitempty"`
 	ApplicationSecrets      []ApplicationSecret     `json:"applicationSecrets,omitempty"`
@@ -148,6 +152,7 @@ func GetValueFromMap(obj map[interface{}]interface{}, keys []string) (interface{
 
 func RenderApplicationConfig(
 	path string,
+	values []string,
 	clusterConfig *ClusterConfig,
 	cloneOptions *CloneOptions,
 	status *cli.Status,
@@ -169,6 +174,10 @@ func RenderApplicationConfig(
 		}
 	}
 	tv := make(map[string]interface{})
+	setValues, err := parseValues(values)
+	if err != nil {
+		return &ApplicationConfig{}, err
+	}
 	// render application dependencies
 	for idx, ad := range v.ApplicationDependencies {
 		tv[ad.Name] = false
@@ -184,19 +193,22 @@ func RenderApplicationConfig(
 		}
 	}
 	// render user values
-	// for idx, userValue := range v.UserValues {
-	// 	value := xxx[userValue.Name]
-	// 	if userValue.Required == true && value == "" {
-	// 		return &ApplicationConfig{}, fmt.Errorf(
-	// 			"user value with name '%s' and template '%s' cannot be resolved and is required for the application",
-	// 			userValue.Name,
-	// 			userValue.Template,
-	// 		)
-	// 	}
-	// 	v.userValues[idx].Value = tpl.String()
-	// 	tv[userValue.Name] = tpl.String()
+	for idx, userValue := range v.UserValues {
+		value := setValues[userValue.Name]
+		if userValue.Required == true && value == "" {
+			return &ApplicationConfig{}, fmt.Errorf("user value with name '%s' is not set using `--set-value` and is required for the application", userValue.Name)
+		}
+		v.UserValues[idx].Value = value
+		tv[userValue.Name] = value
+	}
 	// render cluster values
 	for idx, clusterValue := range v.ClusterValues {
+		// if value is overwrite by the --set-value flag
+		if value, ok := setValues[clusterValue.Name]; ok {
+			v.ClusterValues[idx].Value = value
+			tv[clusterValue.Name] = value
+			continue
+		}
 		t := template.Must(template.New("clusterValue").Funcs(sprig.FuncMap()).Parse(clusterValue.Template))
 		var tpl bytes.Buffer
 		err := t.Execute(&tpl, clusterConfig)
@@ -219,6 +231,12 @@ func RenderApplicationConfig(
 	}
 	// render application values
 	for idx, applicationValue := range v.ApplicationValues {
+		// if value is overwrite by the --set-value flag
+		if value, ok := setValues[applicationValue.Name]; ok {
+			v.ApplicationValues[idx].Value = value
+			tv[applicationValue.Name] = value
+			continue
+		}
 		var repository Repository
 		for _, application := range clusterConfig.Applications {
 			if application.Configuration.Repository == applicationValue.Repository {
@@ -247,6 +265,34 @@ func RenderApplicationConfig(
 		}
 		v.ApplicationValues[idx].Value = value
 		tv[applicationValue.Name] = value
+	}
+	// render passwords
+	for idx, pwd := range v.Passwords {
+		// if value is overwrite by the --set-value flag
+		if value, ok := setValues[pwd.Name]; ok {
+			v.Passwords[idx].Value = value
+			tv[pwd.Name] = value
+			continue
+		}
+		value, err := password.Generate(
+			pwd.Lenght,
+			pwd.NumDigits,
+			pwd.NumSymbols,
+			pwd.NoUpper,
+			pwd.AllowRepeat,
+		)
+		if err != nil {
+			return &ApplicationConfig{}, fmt.Errorf(
+				"error in the password with name %s: %w",
+				pwd.Name,
+				err,
+			)
+		}
+		if pwd.Base64 == true {
+			value = base64.StdEncoding.EncodeToString([]byte(value))
+		}
+		v.Passwords[idx].Value = value
+		tv[pwd.Name] = value
 	}
 	// render the application configuration (without the values) with the template values
 	t := template.Must(template.New("applicationConfig").Funcs(sprig.FuncMap()).Parse(strings.ReplaceAll(string(y), vy, "")))
@@ -334,6 +380,16 @@ func (c *ApplicationConfig) Save(path string) error {
 		return err
 	}
 	return nil
+}
+
+func parseValues(values []string) (map[string]interface{}, error) {
+	base := map[string]interface{}{}
+	for _, value := range values {
+		if err := strvals.ParseInto(value, base); err != nil {
+			return nil, fmt.Errorf("failed parsing --set-value data: %w", err)
+		}
+	}
+	return base, nil
 }
 
 func extractValuesFromYaml(config string) string {
