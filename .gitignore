@@ -22,3 +22,6 @@ go.work
 
 # Local test folder
 test/
+
+# Mac file
+.DS_Store
