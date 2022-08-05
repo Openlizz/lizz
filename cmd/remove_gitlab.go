@@ -97,6 +97,7 @@ func removeGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         removeArgs.fleetBranch,
 			Username:       removeGitlabArgs.owner,
 			Password:       glToken,
+			PrivateKeyFile: removeArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 			Personal:       removeGitlabArgs.personal,
 			Reconcile:      removeGitlabArgs.reconcile,

@@ -103,12 +103,13 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
-			URL:      initArgs.originUrl,
-			Branch:   initArgs.originBranch,
-			Username: initGitlabArgs.owner,
-			Password: glToken,
-			Timeout:  rootArgs.timeout,
-			CaBundle: caBundle,
+			URL:            initArgs.originUrl,
+			Branch:         initArgs.originBranch,
+			Username:       initGitlabArgs.owner,
+			Password:       glToken,
+			PrivateKeyFile: initArgs.privateKeyFile,
+			Timeout:        rootArgs.timeout,
+			CaBundle:       caBundle,
 		},
 		status,
 	)

@@ -39,7 +39,6 @@ type addGitFlags struct {
 	fleetUrl       string
 	username       string
 	password       string
-	privateKeyFile string
 	silent         bool
 }
 
@@ -50,7 +49,6 @@ func init() {
 	addGitCmd.Flags().StringVar(&addGitArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
 	addGitCmd.Flags().StringVarP(&addGitArgs.username, "username", "u", "git", "basic authentication username")
 	addGitCmd.Flags().StringVarP(&addGitArgs.password, "password", "p", "", "basic authentication password")
-	addGitCmd.Flags().StringVar(&addGitArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 	addGitCmd.Flags().BoolVarP(&addGitArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
 
 	addCmd.AddCommand(addGitCmd)
@@ -74,7 +72,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         addArgs.originBranch,
 			Username:       addGitArgs.username,
 			Password:       addGitArgs.password,
-			PrivateKeyFile: addGitArgs.privateKeyFile,
+			PrivateKeyFile: addArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 			CaBundle:       caBundle,
 		},
@@ -93,7 +91,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         addArgs.fleetBranch,
 			Username:       addGitArgs.username,
 			Password:       addGitArgs.password,
-			PrivateKeyFile: addGitArgs.privateKeyFile,
+			PrivateKeyFile: addArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
 		status,
@@ -111,7 +109,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 		&repo.CloneOptions{
 			Username:       addGitArgs.username,
 			Password:       addGitArgs.password,
-			PrivateKeyFile: addGitArgs.privateKeyFile,
+			PrivateKeyFile: addArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
 		status,
@@ -178,7 +176,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 			KeyRSABits:     addArgs.keyRSABits,
 			KeyECDSACurve:  addArgs.keyECDSACurve,
 			SshHostname:    addArgs.sshHostname,
-			PrivateKeyFile: addGitArgs.privateKeyFile,
+			PrivateKeyFile: addArgs.privateKeyFile,
 			PlainProvider:  true,
 		},
 		status,

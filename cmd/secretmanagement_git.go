@@ -29,10 +29,9 @@ var secretManagementGitCmd = &cobra.Command{
 }
 
 type secretManagementGitFlags struct {
-	fleetUrl       string
-	username       string
-	password       string
-	privateKeyFile string
+	fleetUrl string
+	username string
+	password string
 }
 
 var secretManagementGitArgs secretManagementGitFlags
@@ -41,7 +40,6 @@ func init() {
 	secretManagementGitCmd.Flags().StringVar(&secretManagementGitArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
 	secretManagementGitCmd.Flags().StringVarP(&secretManagementGitArgs.username, "username", "u", "git", "basic authentication username")
 	secretManagementGitCmd.Flags().StringVarP(&secretManagementGitArgs.password, "password", "p", "", "basic authentication password")
-	secretManagementGitCmd.Flags().StringVar(&secretManagementGitArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	secretManagementCmd.AddCommand(secretManagementGitCmd)
 }
@@ -55,7 +53,7 @@ func secretManagementGitCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         secretManagementArgs.fleetBranch,
 			Username:       secretManagementGitArgs.username,
 			Password:       secretManagementGitArgs.password,
-			PrivateKeyFile: secretManagementGitArgs.privateKeyFile,
+			PrivateKeyFile: secretManagementArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
 		status,

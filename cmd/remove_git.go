@@ -28,10 +28,9 @@ var removeGitCmd = &cobra.Command{
 }
 
 type removeGitFlags struct {
-	fleetUrl       string
-	username       string
-	password       string
-	privateKeyFile string
+	fleetUrl string
+	username string
+	password string
 }
 
 var removeGitArgs removeGitFlags
@@ -40,7 +39,6 @@ func init() {
 	removeGitCmd.Flags().StringVar(&removeGitArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
 	removeGitCmd.Flags().StringVarP(&removeGitArgs.username, "username", "u", "git", "basic authentication username")
 	removeGitCmd.Flags().StringVarP(&removeGitArgs.password, "password", "p", "", "basic authentication password")
-	removeGitCmd.Flags().StringVar(&removeGitArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	removeCmd.AddCommand(removeGitCmd)
 }
@@ -54,7 +52,7 @@ func removeGitCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         removeArgs.fleetBranch,
 			Username:       removeGitArgs.username,
 			Password:       removeGitArgs.password,
-			PrivateKeyFile: removeGitArgs.privateKeyFile,
+			PrivateKeyFile: removeArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
 		status,

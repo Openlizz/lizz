@@ -31,7 +31,6 @@ type initGitFlags struct {
 	destinationUrl string
 	username       string
 	password       string
-	privateKeyFile string
 }
 
 var initGitArgs initGitFlags
@@ -40,7 +39,6 @@ func init() {
 	initGitCmd.Flags().StringVar(&initGitArgs.destinationUrl, "destination-url", "", "Git repository URL")
 	initGitCmd.Flags().StringVarP(&initGitArgs.username, "username", "u", "git", "basic authentication username")
 	initGitCmd.Flags().StringVarP(&initGitArgs.password, "password", "p", "", "basic authentication password")
-	initGitCmd.Flags().StringVar(&initGitArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	initCmd.AddCommand(initGitCmd)
 }
@@ -54,7 +52,7 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         initArgs.originBranch,
 			Username:       initGitArgs.username,
 			Password:       initGitArgs.password,
-			PrivateKeyFile: initGitArgs.privateKeyFile,
+			PrivateKeyFile: initArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
 		status,

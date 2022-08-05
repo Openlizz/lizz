@@ -98,6 +98,7 @@ func secretManagementGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         secretManagementArgs.fleetBranch,
 			Username:       secretManagementGitlabArgs.owner,
 			Password:       glToken,
+			PrivateKeyFile: secretManagementArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 			Personal:       secretManagementGitlabArgs.personal,
 			Reconcile:      secretManagementGitlabArgs.reconcile,

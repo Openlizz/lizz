@@ -28,6 +28,7 @@ var removeCmd = &cobra.Command{
 type removeFlags struct {
 	applicationName string
 	fleetBranch     string
+	privateKeyFile  string
 
 	authorName  string
 	authorEmail string
@@ -38,6 +39,7 @@ var removeArgs removeFlags
 func init() {
 	removeCmd.PersistentFlags().StringVar(&removeArgs.applicationName, "name", "", "name of the application to remove")
 	removeCmd.PersistentFlags().StringVar(&removeArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
+	removeCmd.PersistentFlags().StringVar(&removeArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	removeCmd.PersistentFlags().StringVar(&removeArgs.authorName, "author-name", "Lizz", "author name for Git commits")
 	removeCmd.PersistentFlags().StringVar(&removeArgs.authorEmail, "author-email", "", "author email for Git commits")

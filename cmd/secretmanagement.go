@@ -30,6 +30,7 @@ type secretManagementFlags struct {
 	path             string
 	decryptionSecret string
 	fleetBranch      string
+	privateKeyFile   string
 
 	authorName  string
 	authorEmail string
@@ -42,6 +43,7 @@ func init() {
 	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.path, "path", "cluster/applications.yaml", "path to the applications yaml file")
 	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.decryptionSecret, "decryption-secret", "sops-age", "name of the secret containing the AGE secret key")
 	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
+	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.authorName, "author-name", "Lizz", "author name for Git commits")
 	secretManagementCmd.PersistentFlags().StringVar(&secretManagementArgs.authorEmail, "author-email", "", "author email for Git commits")
