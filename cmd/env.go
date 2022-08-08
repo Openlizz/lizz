@@ -26,9 +26,10 @@ var envCmd = &cobra.Command{
 }
 
 type envFlags struct {
-	name        string
-	value       string
-	fleetBranch string
+	name           string
+	value          string
+	fleetBranch    string
+	privateKeyFile string
 
 	authorName  string
 	authorEmail string
@@ -40,6 +41,7 @@ func init() {
 	envCmd.PersistentFlags().StringVar(&envArgs.name, "name", "", "name of the env variable to add")
 	envCmd.PersistentFlags().StringVar(&envArgs.value, "value", "", "value of the env variable to add")
 	envCmd.PersistentFlags().StringVar(&envArgs.fleetBranch, "fleet-branch", "main", "Git branch of the fleet repository")
+	envCmd.PersistentFlags().StringVar(&envArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	envCmd.PersistentFlags().StringVar(&envArgs.authorName, "author-name", "Lizz", "author name for Git commits")
 	envCmd.PersistentFlags().StringVar(&envArgs.authorEmail, "author-email", "", "author email for Git commits")

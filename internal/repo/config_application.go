@@ -323,7 +323,8 @@ func RenderApplicationConfig(
 			}
 		}
 		if repository.URL == "" && repository.Name == "" {
-			return &ApplicationConfig{}, fmt.Errorf("application repository of the application secret number %d not found", idx)
+			v.ApplicationSecrets[idx].Secret = nil
+			continue
 		}
 		applicationCloneOptions := cloneOptions
 		applicationCloneOptions.URL = repository.URL

@@ -28,10 +28,9 @@ var envGitCmd = &cobra.Command{
 }
 
 type envGitFlags struct {
-	fleetUrl       string
-	username       string
-	password       string
-	privateKeyFile string
+	fleetUrl string
+	username string
+	password string
 }
 
 var envGitArgs envGitFlags
@@ -40,7 +39,6 @@ func init() {
 	envGitCmd.Flags().StringVar(&envGitArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
 	envGitCmd.Flags().StringVarP(&envGitArgs.username, "username", "u", "git", "basic authentication username")
 	envGitCmd.Flags().StringVarP(&envGitArgs.password, "password", "p", "", "basic authentication password")
-	envGitCmd.Flags().StringVar(&envGitArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
 	envCmd.AddCommand(envGitCmd)
 }
@@ -54,7 +52,7 @@ func envGitCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         envArgs.fleetBranch,
 			Username:       envGitArgs.username,
 			Password:       envGitArgs.password,
-			PrivateKeyFile: envGitArgs.privateKeyFile,
+			PrivateKeyFile: envArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 		},
 		status,

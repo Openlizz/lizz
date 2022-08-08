@@ -194,6 +194,9 @@ func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd stri
 		}
 	}
 	for _, v := range r.config.Values.ApplicationSecrets {
+		if v.Secret == nil {
+			continue
+		}
 		v.Secret["metadata"].(map[interface{}]interface{})["namespace"] = r.config.Namespace
 		y, err := yaml2.Marshal(v.Secret)
 		if err != nil {

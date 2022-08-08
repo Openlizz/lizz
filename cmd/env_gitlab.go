@@ -97,6 +97,7 @@ func envGitlabCmdRun(cmd *cobra.Command, args []string) error {
 			Branch:         removeArgs.fleetBranch,
 			Username:       envGitlabArgs.owner,
 			Password:       glToken,
+			PrivateKeyFile: envArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 			Personal:       envGitlabArgs.personal,
 			Reconcile:      envGitlabArgs.reconcile,
