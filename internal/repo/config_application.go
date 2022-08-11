@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"html/template"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/fluxcd/pkg/apis/meta"
 	"github.com/sethvargo/go-password/password"
@@ -346,9 +346,27 @@ func RenderApplicationConfig(
 	return c, nil
 }
 
-func (c *ApplicationConfig) Check(status *cli.Status) error {
+func (c *ApplicationConfig) Check(clusterConfig *ClusterConfig, status *cli.Status) error {
 	status.Start("Check that the application can be installed ")
 	defer status.End(false)
+	for _, application := range clusterConfig.Applications {
+		if application.Name == c.Name && application.Configuration.Namespace == c.Namespace {
+			return fmt.Errorf(
+				"another application with the name \"%s\" and the namespace \"%s\" already exists in the cluster. Use the flags `--name=<new-name> --namespace=<new-namespace>` to use another application name and another application namespace",
+				c.Name,
+				c.Namespace,
+			)
+		}
+		if application.Name == c.Name {
+			return fmt.Errorf("another application with the name \"%s\" already exists in the cluster. Use the flag `--name=<new-name>` to use another application name", c.Name)
+		}
+		if application.Configuration.Namespace == c.Namespace {
+			return fmt.Errorf(
+				"another application with the namespace \"%s\" already exists in the cluster. Use the flag `--namespace=<new-namespace>` to use another application namespace",
+				c.Namespace,
+			)
+		}
+	}
 	for idx, d := range c.Dependencies {
 		if d == false {
 			return fmt.Errorf("dependency number %d of the application is not fulfilled", idx)

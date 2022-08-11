@@ -129,7 +129,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 	}
 	applicationRepo.Config().Repository = originUrl
 	applicationRepo.Config().Sha = head
-	err = applicationRepo.Config().Check(status)
+	err = applicationRepo.Config().Check(clusterRepo.Config(), status)
 	if err != nil {
 		return err
 	}

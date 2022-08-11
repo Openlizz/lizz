@@ -3,11 +3,11 @@ package repo
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 
 	ignore "github.com/sabhiram/go-gitignore"
