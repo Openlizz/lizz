@@ -120,7 +120,7 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	originUrl, err := repo.UniversalURL(initArgs.originUrl)
+	originUrl, _, err := repo.UniversalURL(initArgs.originUrl)
 	if err != nil {
 		return err
 	}

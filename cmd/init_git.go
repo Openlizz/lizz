@@ -16,6 +16,9 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
@@ -46,6 +49,15 @@ func init() {
 func initGitCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Initialize the cluster repository...")
 
+	var caBundle []byte
+	if initArgs.caFile != "" {
+		var err error
+		caBundle, err = os.ReadFile(initArgs.caFile)
+		if err != nil {
+			return fmt.Errorf("unable to read TLS CA file: %w", err)
+		}
+	}
+
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
 			URL:            initArgs.originUrl,
@@ -54,6 +66,7 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 			Password:       initGitArgs.password,
 			PrivateKeyFile: initArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
+			CaBundle:       caBundle,
 		},
 		status,
 	)
@@ -64,7 +77,7 @@ func initGitCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	originUrl, err := repo.UniversalURL(initArgs.originUrl)
+	originUrl, _, err := repo.UniversalURL(initArgs.originUrl)
 	if err != nil {
 		return err
 	}

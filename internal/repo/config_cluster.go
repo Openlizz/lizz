@@ -12,12 +12,13 @@ type Repository struct {
 	Owner  string `json:"owner,omitempty"`
 	Name   string `json:"name,omitempty"`
 	Branch string `json:"branch,omitempty"`
+	Path   string `json:"path,omitempty"`
 }
 
 type Application struct {
-	Name          string            `json:"name"`
-	Repository    Repository        `json:"repository"`
-	Configuration ApplicationConfig `json:"configuration"`
+	Name          string             `json:"name"`
+	Repository    *Repository        `json:"repository"`
+	Configuration *ApplicationConfig `json:"configuration"`
 }
 
 type Configuration struct {
@@ -30,7 +31,7 @@ type ClusterConfig struct {
 	Sha           string                 `json:"sha"`
 	AgeKey        string                 `json:"ageKey,omitempty"`
 	SopsAgeSecret string                 `json:"sopsAgeSecret,omitempty"`
-	Applications  []Application          `json:"applications,omitempty"`
+	Applications  []*Application         `json:"applications,omitempty"`
 	Env           map[string]interface{} `json:"env,omitempty"`
 }
 
@@ -40,7 +41,7 @@ func NewClusterConfig(repository string, sha string) *ClusterConfig {
 		Sha:           sha,
 		AgeKey:        "",
 		SopsAgeSecret: "",
-		Applications:  []Application{},
+		Applications:  []*Application{},
 	}
 }
 
@@ -86,11 +87,19 @@ func (c *ClusterConfig) Save(path string) error {
 	return nil
 }
 
-func (c *ClusterConfig) AddApplication(repository Repository, applicationConfig *ApplicationConfig) {
-	c.Applications = appendApplicationIfMissing(c.Applications, Application{
+func (c *ClusterConfig) AddApplication(repository *Repository, applicationConfig *ApplicationConfig) {
+	// only keep useful fields from the application config
+	applicationConfigCopy := &ApplicationConfig{
+		Name:               applicationConfig.Name,
+		Namespace:          applicationConfig.Namespace,
+		ServiceAccountName: applicationConfig.ServiceAccountName,
+		Repository:         applicationConfig.Repository,
+		Sha:                applicationConfig.Sha,
+	}
+	c.Applications = appendApplicationIfMissing(c.Applications, &Application{
 		Name:          applicationConfig.Name,
 		Repository:    repository,
-		Configuration: *applicationConfig,
+		Configuration: applicationConfigCopy,
 	})
 }
 
@@ -105,7 +114,25 @@ func (c *ClusterConfig) AddEnv(name, value string) {
 	c.Env[name] = value
 }
 
-func appendApplicationIfMissing(slice []Application, elem Application) []Application {
+func (c *ClusterConfig) GetApplicationConfig(name string) (*ApplicationConfig, error) {
+	for _, application := range c.Applications {
+		if application.Name == name {
+			return application.Configuration, nil
+		}
+	}
+	return nil, fmt.Errorf("application %s not found in the cluster configuration", name)
+}
+
+func (c *ClusterConfig) GetApplicationRepository(name string) (*Repository, error) {
+	for _, application := range c.Applications {
+		if application.Name == name {
+			return application.Repository, nil
+		}
+	}
+	return nil, fmt.Errorf("application %s not found in the cluster configuration", name)
+}
+
+func appendApplicationIfMissing(slice []*Application, elem *Application) []*Application {
 	for _, ele := range slice {
 		if ele.Repository == elem.Repository && ele.Name == ele.Name {
 			return slice
@@ -114,7 +141,7 @@ func appendApplicationIfMissing(slice []Application, elem Application) []Applica
 	return append(slice, elem)
 }
 
-func removeApplicationByName(slice []Application, name string) []Application {
+func removeApplicationByName(slice []*Application, name string) []*Application {
 	for idx, app := range slice {
 		if app.Name == name {
 			slice[idx] = slice[len(slice)-1]

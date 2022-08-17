@@ -29,7 +29,7 @@ var (
 type CreateOptions struct {
 	RepositoryName string
 	Owner          string
-	TransportType  string
+	TransportType  gitprovider.TransportType
 	Branch         string
 	Timeout        time.Duration
 	Personal       bool
@@ -45,8 +45,9 @@ type CloneOptions struct {
 	URL            string
 	RepositoryName string
 	Owner          string
-	TransportType  string
+	TransportType  gitprovider.TransportType
 	Branch         string
+	Sha            string
 	Username       string
 	Password       string
 	PrivateKeyFile string
@@ -145,10 +146,16 @@ func Clone(options *CloneOptions) (*gogit.GoGit, error) {
 	}
 	cloned, err := git.Clone(ctx, nURL.String(), options.Branch, options.CaBundle)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while cloning %s %s %s: %w", nURL.String(), options.Branch, options.CaBundle, err)
 	}
 	if cloned == false {
 		return nil, fmt.Errorf("no error while cloning the repository but cloned false")
+	}
+	if options.Sha != "" {
+		err = git.CheckoutToCommit(options.Sha)
+		if err != nil {
+			return nil, fmt.Errorf("error while checkout to commit %s: %w", options.Sha, err)
+		}
 	}
 	return git, nil
 }

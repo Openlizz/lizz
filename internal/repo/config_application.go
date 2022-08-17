@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/fluxcd/go-git-providers/gitprovider"
 	"github.com/fluxcd/pkg/apis/meta"
 	"github.com/sethvargo/go-password/password"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
@@ -73,12 +74,12 @@ type Password struct {
 }
 
 type Values struct {
-	ApplicationDependencies []ApplicationDependency `json:"applicationDependencies,omitempty"`
-	UserValues              []UserValue             `json:"userValues,omitempty"`
-	ClusterValues           []ClusterValue          `json:"clusterValues,omitempty"`
-	ApplicationValues       []ApplicationValue      `json:"applicationValues,omitempty"`
-	ApplicationSecrets      []ApplicationSecret     `json:"applicationSecrets,omitempty"`
-	Passwords               []Password              `json:"passwords,omitempty"`
+	ApplicationDependencies []*ApplicationDependency `json:"applicationDependencies,omitempty"`
+	UserValues              []*UserValue             `json:"userValues,omitempty"`
+	ClusterValues           []*ClusterValue          `json:"clusterValues,omitempty"`
+	ApplicationValues       []*ApplicationValue      `json:"applicationValues,omitempty"`
+	ApplicationSecrets      []*ApplicationSecret     `json:"applicationSecrets,omitempty"`
+	Passwords               []*Password              `json:"passwords,omitempty"`
 }
 
 type Encryption struct {
@@ -91,10 +92,11 @@ type ApplicationConfig struct {
 	Namespace           string                           `json:"namespace"`
 	ServiceAccountName  string                           `json:"serviceAccountName"`
 	Repository          string                           `json:"repository"`
+	TransportType       gitprovider.TransportType        `json:"transportType"`
 	Sha                 string                           `json:"sha"`
-	Values              Values                           `json:"values,omitempty"`
+	Values              *Values                          `json:"values,omitempty"`
 	TemplatingBlackList []string                         `json:"templatingBlackList,omitempty"`
-	Encryption          Encryption                       `json:"encryption,omitempty"`
+	Encryption          *Encryption                      `json:"encryption,omitempty"`
 	Dependencies        []bool                           `json:"dependencies,omitempty"`
 	DependsOn           []meta.NamespacedObjectReference `json:"dependsOn,omitempty"`
 }
@@ -236,7 +238,7 @@ func RenderApplicationConfig(
 			tv[applicationValue.Name] = value
 			continue
 		}
-		var repository Repository
+		var repository *Repository
 		for _, application := range clusterConfig.Applications {
 			if application.Configuration.Repository == applicationValue.Repository {
 				repository = application.Repository
@@ -316,7 +318,7 @@ func RenderApplicationConfig(
 	}
 	// render application secrets
 	for idx, applicationSecret := range v.ApplicationSecrets {
-		var repository Repository
+		var repository *Repository
 		for _, application := range clusterConfig.Applications {
 			if application.Configuration.Repository == applicationSecret.Repository {
 				repository = application.Repository
@@ -342,29 +344,31 @@ func RenderApplicationConfig(
 		v.ApplicationSecrets[idx].Secret = secret
 	}
 	// add the values (removed for rendering) to the config
-	c.Values = *v
+	c.Values = v
 	return c, nil
 }
 
-func (c *ApplicationConfig) Check(clusterConfig *ClusterConfig, status *cli.Status) error {
+func (c *ApplicationConfig) Check(clusterConfig *ClusterConfig, refresh bool, status *cli.Status) error {
 	status.Start("Check that the application can be installed ")
 	defer status.End(false)
-	for _, application := range clusterConfig.Applications {
-		if application.Name == c.Name && application.Configuration.Namespace == c.Namespace {
-			return fmt.Errorf(
-				"another application with the name \"%s\" and the namespace \"%s\" already exists in the cluster. Use the flags `--name=<new-name> --namespace=<new-namespace>` to use another application name and another application namespace",
-				c.Name,
-				c.Namespace,
-			)
-		}
-		if application.Name == c.Name {
-			return fmt.Errorf("another application with the name \"%s\" already exists in the cluster. Use the flag `--name=<new-name>` to use another application name", c.Name)
-		}
-		if application.Configuration.Namespace == c.Namespace {
-			return fmt.Errorf(
-				"another application with the namespace \"%s\" already exists in the cluster. Use the flag `--namespace=<new-namespace>` to use another application namespace",
-				c.Namespace,
-			)
+	if refresh == false {
+		for _, application := range clusterConfig.Applications {
+			if application.Name == c.Name && application.Configuration.Namespace == c.Namespace {
+				return fmt.Errorf(
+					"another application with the name \"%s\" and the namespace \"%s\" already exists in the cluster. Use the flags `--name=<new-name> --namespace=<new-namespace>` to use another application name and another application namespace",
+					c.Name,
+					c.Namespace,
+				)
+			}
+			if application.Name == c.Name {
+				return fmt.Errorf("another application with the name \"%s\" already exists in the cluster. Use the flag `--name=<new-name>` to use another application name", c.Name)
+			}
+			if application.Configuration.Namespace == c.Namespace {
+				return fmt.Errorf(
+					"another application with the namespace \"%s\" already exists in the cluster. Use the flag `--namespace=<new-namespace>` to use another application namespace",
+					c.Namespace,
+				)
+			}
 		}
 	}
 	for idx, d := range c.Dependencies {
@@ -400,6 +404,21 @@ func (c *ApplicationConfig) Save(path string) error {
 	return nil
 }
 
+func (c *ApplicationConfig) GetUrl() (string, error) {
+	if c.TransportType == "" {
+		c.TransportType = "ssh"
+	}
+	url, err := DecodeUniversalURL(c.Repository, c.TransportType)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
+}
+
+func (c *ApplicationConfig) GetSha() (string, error) {
+	return c.Sha, nil
+}
+
 func parseValues(values []string) (map[string]interface{}, error) {
 	base := map[string]interface{}{}
 	for _, value := range values {
@@ -427,44 +446,64 @@ func extractValuesFromYaml(config string) string {
 	}
 }
 
-func UniversalURL(URL string) (string, error) {
+func UniversalURL(URL string) (string, gitprovider.TransportType, error) {
 	uURL, err := url.Parse(URL)
 	if err != nil {
-		return "", fmt.Errorf("git URL parse failed: %w", err)
+		return "", gitprovider.TransportType(""), fmt.Errorf("git URL parse failed: %w", err)
 	}
 	host := uURL.Host
 	path := uURL.Path
 	if path[len(path)-4:] == ".git" {
 		path = path[:len(path)-4]
 	}
-	return host + path, nil
+	return host + path, gitprovider.TransportType(uURL.Scheme), nil
 }
 
-func CreateRepository(URL string, branch string, provider string) (Repository, error) {
+func DecodeUniversalURL(URL string, transport gitprovider.TransportType) (string, error) {
+	uURL, err := url.Parse(URL)
+	if err != nil {
+		return "", fmt.Errorf("error during url parsing DecodeUniversalURL: %w", err)
+	}
+	switch transport {
+	case gitprovider.TransportTypeHTTPS:
+		uURL.Scheme = "https"
+		uURL.Path = uURL.Path + ".git"
+		return uURL.String(), nil
+	case gitprovider.TransportTypeSSH:
+		uURL.Scheme = "ssh"
+		uURL.Path = "git@" + uURL.Path
+		return uURL.String(), nil
+	}
+	return "", fmt.Errorf("transport type %s not supported", transport)
+}
+
+func CreateRepository(URL, branch, provider, path string) (*Repository, error) {
 	if provider == "gitlab" {
-		uURL, err := UniversalURL(URL)
+		uURL, _, err := UniversalURL(URL)
 		if err != nil {
-			return Repository{}, fmt.Errorf("git URL parse failed: %w", err)
+			return &Repository{}, fmt.Errorf("git URL parse failed: %w", err)
 		}
 		elements := strings.Split(uURL, "/")
 		owner := elements[1]
 		repositoryName := strings.Join(elements[2:], "/")
-		return Repository{
+		return &Repository{
 			URL:    "",
 			Owner:  owner,
 			Name:   repositoryName,
 			Branch: branch,
+			Path:   path,
 		}, nil
 	} else {
 		uURL, err := url.Parse("https://" + URL)
 		if err != nil {
-			return Repository{}, fmt.Errorf("git URL parse failed: %w", err)
+			return &Repository{}, fmt.Errorf("git URL parse failed: %w", err)
 		}
-		return Repository{
+		return &Repository{
 			URL:    uURL.String(),
 			Owner:  "",
 			Name:   "",
 			Branch: branch,
+			Path:   path,
 		}, nil
 	}
 

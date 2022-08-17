@@ -3,6 +3,7 @@ package repo
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"text/template"
 	"time"
 
+	cp "github.com/otiai10/copy"
 	ignore "github.com/sabhiram/go-gitignore"
 	"gitlab.com/openlizz/lizz/internal/git/gogit"
 	"gitlab.com/openlizz/lizz/internal/logger/cli"
@@ -252,5 +254,36 @@ func (r *ApplicationRepo) Encrypt(clusterConfig *ClusterConfig, status *cli.Stat
 		}
 	}
 	status.End(true)
+	return nil
+}
+
+// Replace all the files from r by the ones from repo except the .git folder
+func (r *ApplicationRepo) GetFilesFromAnotherRepo(repo *ApplicationRepo) error {
+	// Remove files from r except .git
+	files, err := ioutil.ReadDir(r.Git().Path())
+	if err != nil {
+		return fmt.Errorf("error reading files from %s: %w", r.Git().Path(), err)
+	}
+	for _, f := range files {
+		if f.Name() != r.Git().Path() && f.Name() != filepath.Join(r.git.Path(), ".git") {
+			err = os.RemoveAll(f.Name())
+			if err != nil {
+				return fmt.Errorf("error removing %s: %w", f.Name(), err)
+			}
+		}
+	}
+	// Copy files
+	opt := cp.Options{
+		Skip: func(src string) (bool, error) {
+			return strings.HasSuffix(src, ".git"), nil
+		},
+		OnDirExists: func(src, dest string) cp.DirExistsAction {
+			return cp.Replace
+		},
+	}
+	err = cp.Copy(repo.Git().Path(), r.Git().Path(), opt)
+	if err != nil {
+		return fmt.Errorf("error while copying files during GetFilesFromAnotherRepo: %w", err)
+	}
 	return nil
 }

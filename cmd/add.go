@@ -29,10 +29,6 @@ var addCmd = &cobra.Command{
 	Long:  ``,
 }
 
-const (
-	tenantLabel = "toolkit.fluxcd.io/tenant"
-)
-
 type addFlags struct {
 	applicationName      string
 	applicationNamespace string

@@ -191,13 +191,14 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if addArgs.applicationNamespace != "" {
 		applicationRepo.Config().Namespace = addArgs.applicationNamespace
 	}
-	originUrl, err := repo.UniversalURL(addArgs.originUrl)
+	originUrl, transportType, err := repo.UniversalURL(addArgs.originUrl)
 	if err != nil {
 		return err
 	}
 	applicationRepo.Config().Repository = originUrl
+	applicationRepo.Config().TransportType = transportType
 	applicationRepo.Config().Sha = head
-	err = applicationRepo.Config().Check(clusterRepo.Config(), status)
+	err = applicationRepo.Config().Check(clusterRepo.Config(), false, status)
 	if err != nil {
 		return err
 	}
@@ -213,7 +214,7 @@ func addGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	transportType := "ssh"
+	transportType = "ssh"
 	if addArgs.tokenAuth == true {
 		transportType = "https"
 	}

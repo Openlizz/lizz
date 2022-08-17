@@ -136,7 +136,7 @@ func (r *ClusterRepo) AddApplication(
 ) (string, error) {
 	status.Start("Add the application to the cluster repository ")
 	defer status.End(false)
-	repository, err := CreateRepository(URL, branch, provider)
+	repository, err := CreateRepository(URL, branch, provider, path)
 	if err != nil {
 		return "", err
 	}
@@ -340,6 +340,53 @@ func (r *ClusterRepo) RemoveApplication(name string, status *cli.Status) error {
 	err = yaml.Save(
 		applicationsY,
 		filepath.Join(r.Git().Path(), "applications", "kustomization.yaml"),
+	)
+	if err != nil {
+		return err
+	}
+	status.End(true)
+	return nil
+}
+
+func (r *ClusterRepo) RefreshApplication(name string, applicationConfig *ApplicationConfig, status *cli.Status) error {
+	status.Start("Refresh the application from the cluster")
+	defer status.End(false)
+	path := ""
+	for _, application := range r.config.Applications {
+		if application.Name == name {
+			application.Configuration.Sha = applicationConfig.Sha
+			path = application.Repository.Path
+		}
+	}
+	if path == "" {
+		return fmt.Errorf("application %s not found in cluster repository configuration", name)
+	}
+	syncY, err := yaml.Read(filepath.Join(r.Git().Path(), "applications", "base", applicationConfig.Name, "sync.yaml"))
+	if err != nil {
+		return err
+	}
+	syncY, err = yaml.UpdateDependsOnSyncYaml(syncY, applicationConfig.DependsOn)
+	if err != nil {
+		return err
+	}
+	err = yaml.Save(
+		syncY,
+		filepath.Join(r.Git().Path(), "applications", "base", applicationConfig.Name, "sync.yaml"),
+	)
+	if err != nil {
+		return err
+	}
+	patchY, err := yaml.Read(filepath.Join(r.Git().Path(), "applications", name+"-patch.yaml"))
+	if err != nil {
+		return err
+	}
+	patchY, err = yaml.UpdatePathPatchYaml(patchY, path)
+	if err != nil {
+		return err
+	}
+	err = yaml.Save(
+		patchY,
+		filepath.Join(r.Git().Path(), "applications", name+"-patch.yaml"),
 	)
 	if err != nil {
 		return err

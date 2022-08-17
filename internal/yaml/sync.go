@@ -85,14 +85,30 @@ func NewSyncYaml(
 			Decryption: decryptionC,
 		},
 	}
-	syncY, err := exportRepository(gitRepositoryC, kustomizationC)
+	syncY, err := exportSync(gitRepositoryC, kustomizationC)
 	if err != nil {
 		return "", err
 	}
 	return syncY, nil
 }
 
-func exportRepository(
+func UpdateDependsOnSyncYaml(
+	syncY string,
+	dependsOn []meta.NamespacedObjectReference,
+) (string, error) {
+	gitRepositoryC, kustomizationC, err := importSync(syncY)
+	if err != nil {
+		return "", fmt.Errorf("error while importSync: %w", err)
+	}
+	kustomizationC.Spec.DependsOn = dependsOn
+	syncY, err = exportSync(gitRepositoryC, kustomizationC)
+	if err != nil {
+		return "", err
+	}
+	return syncY, nil
+}
+
+func exportSync(
 	gitRepository sourcev1.GitRepository,
 	kustomization kustomizev1.Kustomization,
 ) (string, error) {
@@ -117,4 +133,18 @@ func exportRepository(
 	builder.WriteString("---\n")
 	builder.WriteString(resourceToString(data))
 	return builder.String(), nil
+}
+
+func importSync(syncY string) (sourcev1.GitRepository, kustomizev1.Kustomization, error) {
+	gitRepository := &sourcev1.GitRepository{}
+	err := yaml.Unmarshal([]byte(syncY), gitRepository)
+	if err != nil {
+		return sourcev1.GitRepository{}, kustomizev1.Kustomization{}, err
+	}
+	kustomization := &kustomizev1.Kustomization{}
+	err = yaml.Unmarshal([]byte(syncY), kustomization)
+	if err != nil {
+		return sourcev1.GitRepository{}, kustomizev1.Kustomization{}, err
+	}
+	return *gitRepository, *kustomization, nil
 }

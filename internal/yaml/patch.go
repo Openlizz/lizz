@@ -2,6 +2,7 @@ package yaml
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta2"
@@ -26,6 +27,19 @@ func NewPatchYaml(namespace string, name string, path string) (string, error) {
 	return patchY, nil
 }
 
+func UpdatePathPatchYaml(patchY, path string) (string, error) {
+	patchC, err := importPatch(patchY)
+	if err != nil {
+		return "", fmt.Errorf("error while importPatch: %w", err)
+	}
+	patchC.Spec.Path = path
+	patchY, err = exportPatch(patchC)
+	if err != nil {
+		return "", err
+	}
+	return patchY, nil
+}
+
 func exportPatch(kustomization kustomizev1.Kustomization) (string, error) {
 	var builder strings.Builder
 	kustomization.TypeMeta = metav1.TypeMeta{
@@ -43,4 +57,13 @@ func exportPatch(kustomization kustomizev1.Kustomization) (string, error) {
 	data = bytes.Replace(data, []byte("name: \"\"\n"), []byte(""), 1)
 	builder.WriteString(resourceToString(data))
 	return builder.String(), nil
+}
+
+func importPatch(patchY string) (kustomizev1.Kustomization, error) {
+	kustomization := &kustomizev1.Kustomization{}
+	err := yaml.Unmarshal([]byte(patchY), kustomization)
+	if err != nil {
+		return kustomizev1.Kustomization{}, err
+	}
+	return *kustomization, nil
 }

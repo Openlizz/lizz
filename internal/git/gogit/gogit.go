@@ -32,6 +32,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/client"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"gitlab.com/openlizz/lizz/internal/git"
@@ -96,7 +97,16 @@ func (g *GoGit) Init(url, branch string) (bool, error) {
 }
 
 func (g *GoGit) Clone(ctx context.Context, url, branch string, caBundle []byte) (bool, error) {
-	branchRef := plumbing.NewBranchReferenceName(branch)
+	branchRef := plumbing.ReferenceName("")
+	if branch != "" {
+		branchRef = plumbing.NewBranchReferenceName(branch)
+	} else {
+		ref, err := refFromRemoteHead(ctx, url, g.auth)
+		if err != nil {
+			return false, err
+		}
+		branchRef = ref
+	}
 	r, err := gogit.PlainCloneContext(ctx, g.path, false, &gogit.CloneOptions{
 		URL:           url,
 		Auth:          g.auth,
@@ -119,6 +129,20 @@ func (g *GoGit) Clone(ctx context.Context, url, branch string, caBundle []byte) 
 
 	g.repository = r
 	return true, nil
+}
+
+func (g *GoGit) CheckoutToCommit(sha string) error {
+	if g.repository == nil {
+		return git.ErrNoGitRepository
+	}
+	wt, err := g.repository.Worktree()
+	if err != nil {
+		return err
+	}
+	err = wt.Checkout(&gogit.CheckoutOptions{
+		Hash: plumbing.NewHash(sha),
+	})
+	return err
 }
 
 func (g *GoGit) Write(path string, reader io.Reader) error {
@@ -328,4 +352,43 @@ func getOpenPgpEntity(info git.GPGSigningInfo) (*openpgp.Entity, error) {
 	}
 
 	return entity, nil
+}
+
+// from https://github.com/hairyhenderson/gomplate/pull/1217/files
+// refFromRemoteHead - extract the ref from the remote HEAD, to work around
+// hard-coded 'master' default branch in go-git.
+// Should be unnecessary once https://github.com/go-git/go-git/issues/249 is
+// fixed.
+func refFromRemoteHead(ctx context.Context, url string, auth transport.AuthMethod) (plumbing.ReferenceName, error) {
+	e, err := transport.NewEndpoint(url)
+	if err != nil {
+		return "", err
+	}
+
+	cli, err := client.NewClient(e)
+	if err != nil {
+		return "", err
+	}
+
+	s, err := cli.NewUploadPackSession(e, auth)
+	if err != nil {
+		return "", err
+	}
+
+	info, err := s.AdvertisedReferencesContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	refs, err := info.AllReferences()
+	if err != nil {
+		return "", err
+	}
+
+	headRef, ok := refs["HEAD"]
+	if !ok {
+		return "", fmt.Errorf("no HEAD ref found")
+	}
+
+	return headRef.Target(), nil
 }
