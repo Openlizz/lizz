@@ -303,7 +303,7 @@ func reconcileDeployKey(ctx context.Context, publicKey string, repository gitpro
 	if repository == nil {
 		return errors.New("repository is required")
 	}
-	logger.V(0).Infof("public key: %s", strings.TrimSpace(publicKey))
+	logger.V(0).Infof(" • public key: %s", strings.TrimSpace(publicKey))
 
 	name := deployKeyName(addArgs.sourceSecretName, addArgs.destinationBranch, addGitlabArgs.destination)
 	deployKeyInfo := newDeployKeyInfo(name, publicKey, addGitlabArgs.readWriteKey)
@@ -313,7 +313,7 @@ func reconcileDeployKey(ctx context.Context, publicKey string, repository gitpro
 		return err
 	}
 	if changed {
-		logger.V(0).Infof("configured deploy key %q for %q", deployKeyInfo.Name, repository.Repository().String())
+		logger.V(0).Infof(" • configured deploy key %q for %q", deployKeyInfo.Name, repository.Repository().String())
 	}
 	return nil
 }

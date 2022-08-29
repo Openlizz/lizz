@@ -197,7 +197,7 @@ func RenderApplicationConfig(
 	// render user values
 	for idx, userValue := range v.UserValues {
 		value := setValues[userValue.Name]
-		if userValue.Required == true && value == "" {
+		if userValue.Required == true && (value == "" || value == nil) {
 			return &ApplicationConfig{}, fmt.Errorf("user value with name '%s' is not set using `--set-value` and is required for the application", userValue.Name)
 		}
 		v.UserValues[idx].Value = value

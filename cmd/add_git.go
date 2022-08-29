@@ -212,7 +212,7 @@ func addGitCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func promptPublicKey(ctx context.Context, publicKey string) error {
-	logger.V(0).Infof("public key: %s", strings.TrimSpace(publicKey))
+	logger.V(0).Infof(" • public key: %s", strings.TrimSpace(publicKey))
 	if !addGitArgs.silent {
 		prompt := promptui.Prompt{
 			Label:     "Please give the key access to your repository",
