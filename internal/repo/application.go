@@ -94,7 +94,7 @@ func (r *ApplicationRepo) CommitPush(
 	return nil
 }
 
-func (r *ApplicationRepo) Render(destinationRepo *Repository, username, pwd string, status *cli.Status) error {
+func (r *ApplicationRepo) Render(destinationRepo Repository, username, pwd string, status *cli.Status) error {
 	status.Start("Render the application values ")
 	defer status.End(false)
 	tv := make(map[string]interface{})

@@ -136,13 +136,17 @@ func exportSync(
 }
 
 func importSync(syncY string) (sourcev1.GitRepository, kustomizev1.Kustomization, error) {
+	syncS := strings.Split(syncY, "---")
+	if len(syncS) != 2 {
+		return sourcev1.GitRepository{}, kustomizev1.Kustomization{}, fmt.Errorf("error while splitting sync.yaml, the document contains multiple `---`")
+	}
 	gitRepository := &sourcev1.GitRepository{}
-	err := yaml.Unmarshal([]byte(syncY), gitRepository)
+	err := yaml.Unmarshal([]byte(syncS[0]), gitRepository)
 	if err != nil {
 		return sourcev1.GitRepository{}, kustomizev1.Kustomization{}, err
 	}
 	kustomization := &kustomizev1.Kustomization{}
-	err = yaml.Unmarshal([]byte(syncY), kustomization)
+	err = yaml.Unmarshal([]byte(syncS[1]), kustomization)
 	if err != nil {
 		return sourcev1.GitRepository{}, kustomizev1.Kustomization{}, err
 	}

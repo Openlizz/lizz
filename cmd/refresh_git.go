@@ -18,61 +18,38 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"regexp"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/gitlab"
-	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
-var refreshGitlabCmd = &cobra.Command{
-	Use:   "gitlab",
+var refreshGitCmd = &cobra.Command{
+	Use:   "git",
 	Short: "",
 	Long:  ``,
-	RunE:  refreshGitlabCmdRun,
+	RunE:  refreshGitCmdRun,
 }
 
-type refreshGitlabFlags struct {
-	owner     string
-	fleet     string
-	personal  bool
-	hostname  string
-	teams     []string
-	reconcile bool
+type refreshGitFlags struct {
+	fleetUrl string
+	username string
+	password string
+	silent   bool
 }
 
-var refreshGitlabArgs refreshGitlabFlags
+var refreshGitArgs refreshGitFlags
 
 func init() {
-	refreshGitlabCmd.Flags().StringVar(&refreshGitlabArgs.owner, "owner", "", "GitLab user or group name")
-	refreshGitlabCmd.Flags().StringVar(&refreshGitlabArgs.fleet, "fleet", "", "GitLab repository name where to push the application repository")
-	refreshGitlabCmd.Flags().StringSliceVar(&refreshGitlabArgs.teams, "team", []string{}, "GitLab teams to be given maintainer access (also accepts comma-separated values)")
-	refreshGitlabCmd.Flags().BoolVar(&refreshGitlabArgs.personal, "personal", false, "if true, the owner is assumed to be a GitLab user; otherwise a group")
-	refreshGitlabCmd.Flags().StringVar(&refreshGitlabArgs.hostname, "hostname", gitlab.DefaultDomain, "GitLab hostname")
-	refreshGitlabCmd.Flags().BoolVar(&refreshGitlabArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
+	refreshGitCmd.Flags().StringVar(&refreshGitArgs.fleetUrl, "fleet-url", "", "Git repository URL of the fleet repository")
+	refreshGitCmd.Flags().StringVarP(&refreshGitArgs.username, "username", "u", "git", "basic authentication username")
+	refreshGitCmd.Flags().StringVarP(&refreshGitArgs.password, "password", "p", "", "basic authentication password")
+	refreshGitCmd.Flags().BoolVarP(&refreshGitArgs.silent, "silent", "s", false, "assumes the deploy key is already setup, skips confirmation")
 
-	refreshCmd.AddCommand(refreshGitlabCmd)
+	refreshCmd.AddCommand(refreshGitCmd)
 }
 
-func refreshGitlabCmdRun(cmd *cobra.Command, args []string) error {
+func refreshGitCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Refresh application...")
-
-	glToken, err := gitlab.GetToken()
-	if err != nil {
-		return err
-	}
-
-	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, refreshGitlabArgs.fleet); err != nil || !projectNameIsValid {
-		if err == nil {
-			err = fmt.Errorf(
-				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
-				refreshGitlabArgs.fleet,
-			)
-		}
-		return err
-	}
 
 	var caBundle []byte
 	if refreshArgs.caFile != "" {
@@ -83,37 +60,15 @@ func refreshGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Build GitLab provider
-	providerCfg := provider.Config{
-		Provider: provider.GitProviderGitLab,
-		Hostname: refreshGitlabArgs.hostname,
-		Token:    glToken,
-		CaBundle: caBundle,
-	}
-	// Workaround for: https://github.com/fluxcd/go-git-providers/issues/55
-	if hostname := providerCfg.Hostname; hostname != gitlab.DefaultDomain &&
-		!strings.HasPrefix(hostname, "https://") &&
-		!strings.HasPrefix(hostname, "http://") {
-		providerCfg.Hostname = "https://" + providerCfg.Hostname
-	}
-	providerClient, err := provider.BuildGitProvider(providerCfg)
-	if err != nil {
-		return err
-	}
-
 	clusterRepo, err := repo.CloneClusterRepo(
 		&repo.CloneOptions{
-			RepositoryName: refreshGitlabArgs.fleet,
-			Owner:          refreshGitlabArgs.owner,
+			URL:            refreshGitArgs.fleetUrl,
 			Branch:         refreshArgs.fleetBranch,
-			Username:       refreshGitlabArgs.owner,
-			Password:       glToken,
+			Username:       refreshGitArgs.username,
+			Password:       refreshGitArgs.password,
 			PrivateKeyFile: refreshArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
-			Personal:       refreshGitlabArgs.personal,
-			Reconcile:      refreshGitlabArgs.reconcile,
-			Teams:          mapTeamSlice(refreshGitlabArgs.teams, gitlab.DefaultPermission),
-			Provider:       providerClient,
+			CaBundle:       caBundle,
 		},
 		status,
 	)
@@ -134,8 +89,8 @@ func refreshGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	}
 	applicationCloneOptions := &repo.CloneOptions{
 		URL:            url,
-		Username:       refreshGitlabArgs.owner,
-		Password:       glToken,
+		Username:       refreshGitArgs.username,
+		Password:       refreshGitArgs.password,
 		PrivateKeyFile: refreshArgs.privateKeyFile,
 		Timeout:        rootArgs.timeout,
 		CaBundle:       caBundle,
@@ -164,16 +119,11 @@ func refreshGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		refreshArgs.values,
 		clusterRepo.Config(),
 		&repo.CloneOptions{
-			Username:       refreshGitlabArgs.owner,
-			Password:       glToken,
+			Username:       refreshGitArgs.username,
+			Password:       refreshGitArgs.password,
 			PrivateKeyFile: refreshArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
-			Personal:       refreshGitlabArgs.personal,
-			Reconcile:      refreshGitlabArgs.reconcile,
-			Teams:          mapTeamSlice(refreshGitlabArgs.teams, gitlab.DefaultPermission),
 			CaBundle:       caBundle,
-			SshHostname:    refreshArgs.sshHostname,
-			Provider:       providerClient,
 		},
 		status,
 	)
@@ -196,7 +146,7 @@ func refreshGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	if refreshArgs.path != "" {
 		applicationDestinationRepo.Path = refreshArgs.path
 	}
-	err = applicationRepo.Render(applicationDestinationRepo, refreshGitlabArgs.owner, glToken, status)
+	err = applicationRepo.Render(applicationDestinationRepo, refreshGitArgs.username, refreshGitArgs.password, status)
 	if err != nil {
 		return err
 	}
@@ -206,19 +156,12 @@ func refreshGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	}
 	destinationApplicationRepo, err := repo.CloneApplicationRepo(
 		&repo.CloneOptions{
-			RepositoryName: applicationDestinationRepo.Name,
-			Owner:          applicationDestinationRepo.Owner,
-			Branch:         applicationDestinationRepo.Branch,
-			Username:       refreshGitlabArgs.owner,
-			Password:       glToken,
+			URL:            applicationDestinationRepo.URL,
+			Username:       refreshGitArgs.username,
+			Password:       refreshGitArgs.password,
 			PrivateKeyFile: refreshArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
-			Personal:       refreshGitlabArgs.personal,
-			Reconcile:      refreshGitlabArgs.reconcile,
-			Teams:          mapTeamSlice(refreshGitlabArgs.teams, gitlab.DefaultPermission),
 			CaBundle:       caBundle,
-			SshHostname:    refreshArgs.sshHostname,
-			Provider:       providerClient,
 		},
 		status,
 	)

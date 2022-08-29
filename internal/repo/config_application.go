@@ -46,6 +46,7 @@ type ClusterValue struct {
 
 type ApplicationValue struct {
 	Name       string      `json:"name"`
+	Required   bool        `json:"required,omitempty"`
 	Repository string      `json:"repository,omitempty"`
 	Path       string      `json:"path,omitempty"`
 	Keys       []string    `json:"keys,omitempty"`
@@ -74,12 +75,12 @@ type Password struct {
 }
 
 type Values struct {
-	ApplicationDependencies []*ApplicationDependency `json:"applicationDependencies,omitempty"`
-	UserValues              []*UserValue             `json:"userValues,omitempty"`
-	ClusterValues           []*ClusterValue          `json:"clusterValues,omitempty"`
-	ApplicationValues       []*ApplicationValue      `json:"applicationValues,omitempty"`
-	ApplicationSecrets      []*ApplicationSecret     `json:"applicationSecrets,omitempty"`
-	Passwords               []*Password              `json:"passwords,omitempty"`
+	ApplicationDependencies []ApplicationDependency `json:"applicationDependencies,omitempty"`
+	UserValues              []UserValue             `json:"userValues,omitempty"`
+	ClusterValues           []ClusterValue          `json:"clusterValues,omitempty"`
+	ApplicationValues       []ApplicationValue      `json:"applicationValues,omitempty"`
+	ApplicationSecrets      []ApplicationSecret     `json:"applicationSecrets,omitempty"`
+	Passwords               []Password              `json:"passwords,omitempty"`
 }
 
 type Encryption struct {
@@ -94,9 +95,9 @@ type ApplicationConfig struct {
 	Repository          string                           `json:"repository"`
 	TransportType       gitprovider.TransportType        `json:"transportType"`
 	Sha                 string                           `json:"sha"`
-	Values              *Values                          `json:"values,omitempty"`
+	Values              Values                           `json:"values,omitempty"`
 	TemplatingBlackList []string                         `json:"templatingBlackList,omitempty"`
-	Encryption          *Encryption                      `json:"encryption,omitempty"`
+	Encryption          Encryption                       `json:"encryption,omitempty"`
 	Dependencies        []bool                           `json:"dependencies,omitempty"`
 	DependsOn           []meta.NamespacedObjectReference `json:"dependsOn,omitempty"`
 }
@@ -104,16 +105,16 @@ type ApplicationConfig struct {
 func OpenApplicationConfig(path string) (*ApplicationConfig, error) {
 	_, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("the path to the application config does not exist: %w", err)
+		return &ApplicationConfig{}, fmt.Errorf("the path to the application config does not exist: %w", err)
 	}
 	y, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return &ApplicationConfig{}, err
 	}
 	c := &ApplicationConfig{}
 	err = yaml.Unmarshal([]byte(y), &c)
 	if err != nil {
-		return nil, err
+		return &ApplicationConfig{}, err
 	}
 	return c, nil
 }
@@ -160,11 +161,11 @@ func RenderApplicationConfig(
 ) (*ApplicationConfig, error) {
 	_, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("The path to the cluster config does not exist: %w.", err)
+		return &ApplicationConfig{}, fmt.Errorf("The path to the cluster config does not exist: %w.", err)
 	}
 	y, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return &ApplicationConfig{}, err
 	}
 	vy := extractValuesFromYaml(string(y))
 	v := &Values{}
@@ -238,14 +239,19 @@ func RenderApplicationConfig(
 			tv[applicationValue.Name] = value
 			continue
 		}
-		var repository *Repository
+		var repository Repository
 		for _, application := range clusterConfig.Applications {
 			if application.Configuration.Repository == applicationValue.Repository {
 				repository = application.Repository
 			}
 		}
 		if repository.URL == "" && repository.Name == "" {
-			return &ApplicationConfig{}, fmt.Errorf("application repository of the application value with name '%s' not found", applicationValue.Name)
+			if applicationValue.Required == true {
+				return &ApplicationConfig{}, fmt.Errorf("application repository of the application value with name '%s' not found", applicationValue.Name)
+			}
+			v.ApplicationValues[idx].Value = ""
+			tv[applicationValue.Name] = ""
+			continue
 		}
 		applicationCloneOptions := cloneOptions
 		applicationCloneOptions.URL = repository.URL
@@ -318,7 +324,7 @@ func RenderApplicationConfig(
 	}
 	// render application secrets
 	for idx, applicationSecret := range v.ApplicationSecrets {
-		var repository *Repository
+		var repository Repository
 		for _, application := range clusterConfig.Applications {
 			if application.Configuration.Repository == applicationSecret.Repository {
 				repository = application.Repository
@@ -344,14 +350,14 @@ func RenderApplicationConfig(
 		v.ApplicationSecrets[idx].Secret = secret
 	}
 	// add the values (removed for rendering) to the config
-	c.Values = v
+	c.Values = *v
 	return c, nil
 }
 
-func (c *ApplicationConfig) Check(clusterConfig *ClusterConfig, refresh bool, status *cli.Status) error {
+func (c *ApplicationConfig) Check(clusterConfig *ClusterConfig, alreadyInstalled bool, status *cli.Status) error {
 	status.Start("Check that the application can be installed ")
 	defer status.End(false)
-	if refresh == false {
+	if alreadyInstalled == false {
 		for _, application := range clusterConfig.Applications {
 			if application.Name == c.Name && application.Configuration.Namespace == c.Namespace {
 				return fmt.Errorf(
@@ -477,16 +483,16 @@ func DecodeUniversalURL(URL string, transport gitprovider.TransportType) (string
 	return "", fmt.Errorf("transport type %s not supported", transport)
 }
 
-func CreateRepository(URL, branch, provider, path string) (*Repository, error) {
+func CreateRepository(URL, branch, provider, path string) (Repository, error) {
 	if provider == "gitlab" {
 		uURL, _, err := UniversalURL(URL)
 		if err != nil {
-			return &Repository{}, fmt.Errorf("git URL parse failed: %w", err)
+			return Repository{}, fmt.Errorf("git URL parse failed: %w", err)
 		}
 		elements := strings.Split(uURL, "/")
 		owner := elements[1]
 		repositoryName := strings.Join(elements[2:], "/")
-		return &Repository{
+		return Repository{
 			URL:    "",
 			Owner:  owner,
 			Name:   repositoryName,
@@ -496,9 +502,9 @@ func CreateRepository(URL, branch, provider, path string) (*Repository, error) {
 	} else {
 		uURL, err := url.Parse("https://" + URL)
 		if err != nil {
-			return &Repository{}, fmt.Errorf("git URL parse failed: %w", err)
+			return Repository{}, fmt.Errorf("git URL parse failed: %w", err)
 		}
-		return &Repository{
+		return Repository{
 			URL:    uURL.String(),
 			Owner:  "",
 			Name:   "",
