@@ -27,12 +27,11 @@ type Configuration struct {
 }
 
 type ClusterConfig struct {
-	Repository    string                 `json:"repository"`
-	Sha           string                 `json:"sha"`
-	AgeKey        string                 `json:"ageKey,omitempty"`
-	SopsAgeSecret string                 `json:"sopsAgeSecret,omitempty"`
-	Applications  []Application          `json:"applications,omitempty"`
-	Env           map[string]interface{} `json:"env,omitempty"`
+	Repository    string        `json:"repository"`
+	Sha           string        `json:"sha"`
+	AgeKey        string        `json:"ageKey,omitempty"`
+	SopsAgeSecret string        `json:"sopsAgeSecret,omitempty"`
+	Applications  []Application `json:"applications,omitempty"`
 }
 
 func NewClusterConfig(repository string, sha string) *ClusterConfig {
@@ -105,13 +104,6 @@ func (c *ClusterConfig) AddApplication(repository Repository, applicationConfig 
 
 func (c *ClusterConfig) RemoveApplication(name string) {
 	c.Applications = removeApplicationByName(c.Applications, name)
-}
-
-func (c *ClusterConfig) AddEnv(name, value string) {
-	if c.Env == nil {
-		c.Env = make(map[string]interface{})
-	}
-	c.Env[name] = value
 }
 
 func (c *ClusterConfig) GetApplicationConfig(name string) (ApplicationConfig, error) {
