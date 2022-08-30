@@ -26,6 +26,8 @@ var (
 	ErrReconciledWithWarning = errors.New("reconciled with warning")
 )
 
+const configFilename string = "lizz.yaml"
+
 type CreateOptions struct {
 	RepositoryName string
 	Owner          string
@@ -73,23 +75,29 @@ func Create(options *CreateOptions, status *cli.Status) (string, gitprovider.Use
 	var repo gitprovider.UserRepository
 	var err error
 	if options.Personal {
+		fmt.Println("reconcileUserRepository")
 		repo, err = options.reconcileUserRepository(ctx)
 	} else {
+		fmt.Println("reconcileOrgRepository")
 		repo, err = options.reconcileOrgRepository(ctx)
 	}
 	if err != nil && !errors.Is(err, ErrReconciledWithWarning) {
+		fmt.Println("Err coming from reconcileRepo: ", options)
 		return "", nil, err
 	}
+	fmt.Println("Err not coming from reconcileRepo: ", repo)
 	if options.TransportType == "" {
 		options.TransportType = "ssh"
 	}
 	URL, err := getCloneURL(repo, gitprovider.TransportType(options.TransportType), options.SshHostname)
 	if err != nil {
+		fmt.Println("Err coming from getCloneURL: ", repo, gitprovider.TransportType(options.TransportType), options.SshHostname)
 		return "", nil, err
 	}
 	if status != nil {
 		status.End(true)
 	}
+	fmt.Println("Create return: ", URL, repo, nil)
 	return URL, repo, nil
 }
 
@@ -371,6 +379,13 @@ func (opts *CreateOptions) reconcileUserRepository(ctx context.Context) (gitprov
 	userRef := newUserRef(opts.Provider.SupportedDomain(), opts.Owner)
 	repoRef := newUserRepositoryRef(userRef, repoName)
 	repoInfo := newRepositoryInfo(opts.Description, opts.Branch, opts.Visibility)
+
+	repos, err := opts.Provider.UserRepositories().List(ctx, userRef)
+	if err != nil {
+		fmt.Println("User Repos: ", opts.Provider.SupportedDomain(), opts.Provider.ProviderID(), opts.Provider.UserRepositories())
+		return nil, fmt.Errorf("failed to list Git repositories of %q: %w", userRef.String(), err)
+	}
+	fmt.Println("REPOSSSSS: ", repos)
 
 	// Reconcile the user repository
 	repo, err := opts.Provider.UserRepositories().Get(ctx, repoRef)

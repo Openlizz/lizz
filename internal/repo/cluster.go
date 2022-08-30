@@ -58,7 +58,7 @@ func (r *ClusterRepo) NewClusterConfig(repository string, sha string, status *cl
 func (r *ClusterRepo) OpenClusterConfig(status *cli.Status) error {
 	status.Start("Open and read the cluster configuration file")
 	defer status.End(false)
-	c, err := OpenClusterConfig(filepath.Join(r.git.Path(), "config.yaml"))
+	c, err := OpenClusterConfig(filepath.Join(r.git.Path(), configFilename))
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (r *ClusterRepo) SaveClusterConfig() error {
 	if err != nil {
 		return err
 	}
-	err = yaml.Save(string(cY), filepath.Join(r.git.Path(), "config.yaml"))
+	err = yaml.Save(string(cY), filepath.Join(r.git.Path(), configFilename))
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (r *ClusterRepo) ConfigureSecretManagement(secretName string, output string
 	}
 	r.config.AgeKey = k.Recipient().String()
 	r.config.SopsAgeSecret = string(yamlE)
-	err = r.config.Save(filepath.Join(r.git.Path(), "config.yaml"))
+	err = r.config.Save(filepath.Join(r.git.Path(), configFilename))
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (r *ClusterRepo) AddApplication(
 		return "", err
 	}
 	r.config.AddApplication(repository, applicationConfig)
-	err = r.config.Save(filepath.Join(r.git.Path(), "config.yaml"))
+	err = r.config.Save(filepath.Join(r.git.Path(), configFilename))
 	if err != nil {
 		return "", err
 	}
@@ -304,7 +304,7 @@ func (r *ClusterRepo) RemoveApplication(name string, status *cli.Status) error {
 	status.Start("Remove the application from the cluster")
 	defer status.End(false)
 	r.config.RemoveApplication(name)
-	err := r.config.Save(filepath.Join(r.git.Path(), "config.yaml"))
+	err := r.config.Save(filepath.Join(r.git.Path(), configFilename))
 	if err != nil {
 		return err
 	}
