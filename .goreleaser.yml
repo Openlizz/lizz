@@ -24,7 +24,6 @@ builds:
       - arm64
   - <<: *build_defaults
     id: windows
-    binary: lizz.exe
     goos:
       - windows
 
