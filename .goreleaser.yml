@@ -55,4 +55,4 @@ brews:
       name: homebrew-tap
     folder: Formula
     homepage: "https://github.com/openlizz/lizz"
-    description: "CLI to facilitate the creation of a Flux2 managed k8s cluster and the deployment of applications."
+    description: "CLI to facilitate the management of a Flux2 k8s cluster"
