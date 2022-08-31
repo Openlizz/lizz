@@ -49,7 +49,7 @@ func (r *ApplicationRepo) Git() *gogit.GoGit {
 }
 
 func (r *ApplicationRepo) OpenApplicationConfig() error {
-	c, err := OpenApplicationConfig(filepath.Join(r.git.Path(), "config.yaml"))
+	c, err := OpenApplicationConfig(filepath.Join(r.git.Path(), configFilename))
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (r *ApplicationRepo) RenderApplicationConfig(values []string, clusterConfig
 	status.Start("Render the application configuration ")
 	defer status.End(false)
 	c, err := RenderApplicationConfig(
-		filepath.Join(r.git.Path(), "config.yaml"),
+		filepath.Join(r.git.Path(), configFilename),
 		values,
 		clusterConfig,
 		cloneOptions,
@@ -160,7 +160,7 @@ func (r *ApplicationRepo) Render(destinationRepo Repository, username, pwd strin
 		}
 		if info.IsDir() == false && strings.Index(path, ".git") == -1 {
 			blackListed := false
-			object := ignore.CompileIgnoreLines(append(r.config.TemplatingBlackList, "config.yaml")...)
+			object := ignore.CompileIgnoreLines(append(r.config.TemplatingBlackList, configFilename)...)
 			blackListed = object.MatchesPath(strings.Replace(path, r.git.Path()+"/", "", -1))
 			if blackListed == false {
 				fps = append(fps, path)

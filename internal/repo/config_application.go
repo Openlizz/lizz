@@ -484,7 +484,7 @@ func DecodeUniversalURL(URL string, transport gitprovider.TransportType) (string
 }
 
 func CreateRepository(URL, branch, provider, path string) (Repository, error) {
-	if provider == "gitlab" {
+	if provider == "gitlab" || provider == "github" {
 		uURL, _, err := UniversalURL(URL)
 		if err != nil {
 			return Repository{}, fmt.Errorf("git URL parse failed: %w", err)

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +30,7 @@ type initFlags struct {
 	originBranch       string
 	destinationBranch  string
 	destinationPrivate bool
+	sshHostname        string
 	caFile             string
 	privateKeyFile     string
 
@@ -44,6 +45,7 @@ func init() {
 	initCmd.PersistentFlags().StringVar(&initArgs.originBranch, "origin-branch", "main", "Git branch of the repository")
 	initCmd.PersistentFlags().StringVar(&initArgs.destinationBranch, "destination-branch", "main", "Git branch of the destination repository")
 	initCmd.PersistentFlags().BoolVar(&initArgs.destinationPrivate, "private", true, "if true, the repository is setup or configured as private")
+	initCmd.PersistentFlags().StringVar(&initArgs.sshHostname, "ssh-hostname", "", "SSH hostname, to be used when the SSH host differs from the HTTPS one")
 	initCmd.PersistentFlags().StringVar(&initArgs.caFile, "ca-file", "", "path to TLS CA file used for validating self-signed certificates")
 	initCmd.PersistentFlags().StringVar(&initArgs.privateKeyFile, "private-key-file", "", "path to a private key file used for authenticating to the Git SSH server")
 
