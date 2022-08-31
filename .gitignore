@@ -25,3 +25,6 @@ test/
 
 # Mac file
 .DS_Store
+
+# Binary
+lizz
