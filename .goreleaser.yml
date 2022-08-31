@@ -2,7 +2,6 @@ project_name: lizz
 builds:
   - <<: &build_defaults
       binary: lizz
-      main: ./lizz
       ldflags:
         - -s -w -X main.VERSION={{ .Version }}
       env:
@@ -23,10 +22,10 @@ builds:
     goarch:
       - amd64
       - arm64
-  - <<: *build_defaults
-    id: windows
-    goos:
-      - windows
+  # - <<: *build_defaults
+  #   id: windows
+  #   goos:
+  #     - windows
 
 archives:
   - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
@@ -35,12 +34,12 @@ archives:
     format: tar.gz
     files:
       - none*
-  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    id: windows
-    builds: [windows]
-    format: zip
-    files:
-      - none*
+  # - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  #   id: windows
+  #   builds: [windows]
+  #   format: zip
+  #   files:
+  #     - none*
 
 source:
   enabled: true
