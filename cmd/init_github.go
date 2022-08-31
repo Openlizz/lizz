@@ -108,18 +108,6 @@ func initGithubCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	clusterRepo.NewClusterConfig(originUrl, head, status)
-	fmt.Println("Repo create: ", &repo.CreateOptions{
-		RepositoryName: initGithubArgs.destination,
-		Owner:          initGithubArgs.owner,
-		TransportType:  "https",
-		Branch:         initArgs.destinationBranch,
-		Timeout:        rootArgs.timeout,
-		Personal:       initGithubArgs.personal,
-		Reconcile:      initGithubArgs.reconcile,
-		Teams:          mapTeamSlice(initGithubArgs.teams, github.DefaultPermission),
-		SshHostname:    initArgs.sshHostname,
-		Provider:       providerClient,
-	})
 	destinationUrl, _, err := repo.Create(&repo.CreateOptions{
 		RepositoryName: initGithubArgs.destination,
 		Owner:          initGithubArgs.owner,
