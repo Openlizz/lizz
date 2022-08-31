@@ -26,6 +26,8 @@ var (
 	ErrReconciledWithWarning = errors.New("reconciled with warning")
 )
 
+const configFilename string = "lizz.yaml"
+
 type CreateOptions struct {
 	RepositoryName string
 	Owner          string

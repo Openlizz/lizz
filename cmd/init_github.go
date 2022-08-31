@@ -18,23 +18,21 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"regexp"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/gitlab"
+	"gitlab.com/openlizz/lizz/internal/github"
 	"gitlab.com/openlizz/lizz/internal/provider"
 	"gitlab.com/openlizz/lizz/internal/repo"
 )
 
-var initGitlabCmd = &cobra.Command{
-	Use:   "gitlab",
+var initGithubCmd = &cobra.Command{
+	Use:   "github",
 	Short: "",
 	Long:  ``,
-	RunE:  initGitlabCmdRun,
+	RunE:  initGithubCmdRun,
 }
 
-type initGitlabFlags struct {
+type initGithubFlags struct {
 	owner       string
 	destination string
 	personal    bool
@@ -43,34 +41,25 @@ type initGitlabFlags struct {
 	reconcile   bool
 }
 
-var initGitlabArgs initGitlabFlags
+var initGithubArgs initGithubFlags
 
 func init() {
-	initGitlabCmd.Flags().StringVar(&initGitlabArgs.owner, "owner", "", "GitLab user or group name")
-	initGitlabCmd.Flags().StringVar(&initGitlabArgs.destination, "destination", "", "GitLab repository name where to push the application repository")
-	initGitlabCmd.Flags().StringSliceVar(&initGitlabArgs.teams, "team", []string{}, "GitLab teams to be given maintainer access (also accepts comma-separated values)")
-	initGitlabCmd.Flags().BoolVar(&initGitlabArgs.personal, "personal", false, "if true, the owner is assumed to be a GitLab user; otherwise a group")
-	initGitlabCmd.Flags().StringVar(&initGitlabArgs.hostname, "hostname", gitlab.DefaultDomain, "GitLab hostname")
-	initGitlabCmd.Flags().BoolVar(&initGitlabArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
+	initGithubCmd.Flags().StringVar(&initGithubArgs.owner, "owner", "", "GitHub user or organization name")
+	initGithubCmd.Flags().StringVar(&initGithubArgs.destination, "destination", "", "GitHub repository name where to push the application repository")
+	initGithubCmd.Flags().
+		StringSliceVar(&initGithubArgs.teams, "team", []string{}, "GitHub team and the access to be given to it(team:maintain). Defaults to maintainer access if no access level is specified (also accepts comma-separated values)")
+	initGithubCmd.Flags().BoolVar(&initGithubArgs.personal, "personal", false, "if true, the owner is assumed to be a GitHub user; otherwise an org")
+	initGithubCmd.Flags().StringVar(&initGithubArgs.hostname, "hostname", github.DefaultDomain, "GitHub hostname")
+	initGithubCmd.Flags().BoolVar(&initGithubArgs.reconcile, "reconcile", false, "if true, the configured options are also reconciled if the repository already exists")
 
-	initCmd.AddCommand(initGitlabCmd)
+	initCmd.AddCommand(initGithubCmd)
 }
 
-func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
+func initGithubCmdRun(cmd *cobra.Command, args []string) error {
 	logger.V(0).Infof("Initialize the cluster repository...")
 
-	glToken, err := gitlab.GetToken()
+	ghToken, err := github.GetToken()
 	if err != nil {
-		return err
-	}
-
-	if projectNameIsValid, err := regexp.MatchString(gitlab.ProjectRegex, initGitlabArgs.destination); err != nil || !projectNameIsValid {
-		if err == nil {
-			err = fmt.Errorf(
-				"%s is an invalid project name for gitlab.\nIt can contain only letters, digits, emojis, '_', '.', dash, space. It must start with letter, digit, emoji or '_'.",
-				initGitlabArgs.destination,
-			)
-		}
 		return err
 	}
 
@@ -83,18 +72,12 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Build GitLab provider
+	// Build GitHub provider
 	providerCfg := provider.Config{
-		Provider: provider.GitProviderGitLab,
-		Hostname: initGitlabArgs.hostname,
-		Token:    glToken,
+		Provider: provider.GitProviderGitHub,
+		Hostname: initGithubArgs.hostname,
+		Token:    ghToken,
 		CaBundle: caBundle,
-	}
-	// Workaround for: https://github.com/fluxcd/go-git-providers/issues/55
-	if hostname := providerCfg.Hostname; hostname != gitlab.DefaultDomain &&
-		!strings.HasPrefix(hostname, "https://") &&
-		!strings.HasPrefix(hostname, "http://") {
-		providerCfg.Hostname = "https://" + providerCfg.Hostname
 	}
 	providerClient, err := provider.BuildGitProvider(providerCfg)
 	if err != nil {
@@ -105,8 +88,8 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 		&repo.CloneOptions{
 			URL:            initArgs.originUrl,
 			Branch:         initArgs.originBranch,
-			Username:       initGitlabArgs.owner,
-			Password:       glToken,
+			Username:       initGithubArgs.owner,
+			Password:       ghToken,
 			PrivateKeyFile: initArgs.privateKeyFile,
 			Timeout:        rootArgs.timeout,
 			CaBundle:       caBundle,
@@ -126,21 +109,21 @@ func initGitlabCmdRun(cmd *cobra.Command, args []string) error {
 	}
 	clusterRepo.NewClusterConfig(originUrl, head, status)
 	destinationUrl, _, err := repo.Create(&repo.CreateOptions{
-		RepositoryName: initGitlabArgs.destination,
-		Owner:          initGitlabArgs.owner,
+		RepositoryName: initGithubArgs.destination,
+		Owner:          initGithubArgs.owner,
 		TransportType:  "https",
 		Branch:         initArgs.destinationBranch,
 		Timeout:        rootArgs.timeout,
-		Personal:       initGitlabArgs.personal,
-		Reconcile:      initGitlabArgs.reconcile,
-		Teams:          mapTeamSlice(initGitlabArgs.teams, gitlab.DefaultPermission),
+		Personal:       initGithubArgs.personal,
+		Reconcile:      initGithubArgs.reconcile,
+		Teams:          mapTeamSlice(initGithubArgs.teams, github.DefaultPermission),
 		SshHostname:    initArgs.sshHostname,
 		Provider:       providerClient,
 	}, status)
 	if err != nil {
 		return err
 	}
-	clusterRepo.Git().SetAuth(initGitlabArgs.owner, glToken)
+	clusterRepo.Git().SetAuth(initGithubArgs.owner, ghToken)
 	clusterRepo.CommitPush(
 		initArgs.authorName,
 		initArgs.authorEmail,
