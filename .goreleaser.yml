@@ -1,0 +1,62 @@
+project_name: lizz
+builds:
+  - <<: &build_defaults
+      binary: lizz
+      main: ./lizz
+      ldflags:
+        - -s -w -X main.VERSION={{ .Version }}
+      env:
+        - CGO_ENABLED=0
+    id: linux
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 7
+  - <<: *build_defaults
+    id: darwin
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+  - <<: *build_defaults
+    id: windows
+    goos:
+      - windows
+
+archives:
+  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: nix
+    builds: [linux, darwin]
+    format: tar.gz
+    files:
+      - none*
+  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: windows
+    builds: [windows]
+    format: zip
+    files:
+      - none*
+
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_source_code"
+
+release:
+  prerelease: auto
+
+universal_binaries:
+  - replace: true
+
+brews:
+  - name: lizz
+    tap:
+      owner: openlizz
+      name: homebrew-tap
+    folder: Formula
+    homepage: "https://github.com/openlizz/lizz"
+    description: "Lizz CLI"
