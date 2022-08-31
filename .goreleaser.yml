@@ -22,10 +22,11 @@ builds:
     goarch:
       - amd64
       - arm64
-  # - <<: *build_defaults
-  #   id: windows
-  #   goos:
-  #     - windows
+  - <<: *build_defaults
+    id: windows
+    binary: lizz.exe
+    goos:
+      - windows
 
 archives:
   - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
@@ -34,12 +35,12 @@ archives:
     format: tar.gz
     files:
       - none*
-  # - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  #   id: windows
-  #   builds: [windows]
-  #   format: zip
-  #   files:
-  #     - none*
+  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: windows
+    builds: [windows]
+    format: zip
+    files:
+      - none*
 
 source:
   enabled: true
@@ -48,9 +49,6 @@ source:
 release:
   prerelease: auto
 
-universal_binaries:
-  - replace: true
-
 brews:
   - name: lizz
     tap:
@@ -58,4 +56,3 @@ brews:
       name: homebrew-tap
     folder: Formula
     homepage: "https://github.com/openlizz/lizz"
-    description: "Lizz CLI"
