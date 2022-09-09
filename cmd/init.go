@@ -21,8 +21,8 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "",
-	Long:  ``,
+	Short: "Initialize the fleet repository",
+	Long:  `The init command is used to initialize the cluster by creating the fleet repository.`,
 }
 
 type initFlags struct {

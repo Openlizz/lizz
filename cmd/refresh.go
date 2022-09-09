@@ -21,8 +21,10 @@ import (
 
 var refreshCmd = &cobra.Command{
 	Use:   "refresh",
-	Short: "",
-	Long:  ``,
+	Short: "Refresh an application",
+	Long:  `The refresh command is used to refresh an application already added to the cluster. It refreshs the
+application configuration with the current cluster state. It can also update the application by using the latest
+changes of the application origin repository.`,
 }
 
 type refreshFlags struct {
