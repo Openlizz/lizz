@@ -361,6 +361,7 @@ func (r *ClusterRepo) RefreshApplication(name string, applicationConfig *Applica
 	if path == "" {
 		return fmt.Errorf("application %s not found in cluster repository configuration", name)
 	}
+	// Update dependsOn value of sync.yaml
 	syncY, err := yaml.Read(filepath.Join(r.Git().Path(), "applications", "base", applicationConfig.Name, "sync.yaml"))
 	if err != nil {
 		return err
@@ -376,6 +377,7 @@ func (r *ClusterRepo) RefreshApplication(name string, applicationConfig *Applica
 	if err != nil {
 		return err
 	}
+	// Update path value of <application name>-patch.yaml
 	patchY, err := yaml.Read(filepath.Join(r.Git().Path(), "applications", name+"-patch.yaml"))
 	if err != nil {
 		return err
