@@ -29,9 +29,11 @@ import (
 
 var addGitCmd = &cobra.Command{
 	Use:   "git",
-	Short: "",
-	Long:  ``,
-	RunE:  addGitCmdRun,
+	Short: "Add an application from and to any Git server",
+	Long: `The add git command is used to add a Lizz compatible application to the cluster when the 
+	repositories are stored in a Git server. It updates the fleet git repository with the new application 
+	and	creates a git repository for the new application.`,
+	RunE: addGitCmdRun,
 }
 
 type addGitFlags struct {

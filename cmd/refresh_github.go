@@ -27,8 +27,15 @@ import (
 
 var refreshGithubCmd = &cobra.Command{
 	Use:   "github",
-	Short: "",
-	Long:  ``,
+	Short: "Refresh an application from GitHub",
+	Long:  `The refresh command is used to refresh an application already added to the GitHub cluster. It refreshs the
+application configuration with the current cluster state. It can also update the application by using the latest
+changes of the application origin GitHub repository.`,
+	Example: `# Refresh an application to update its configuration regarding the current cluster state
+lizz refresh github --owner=<group>  --fleet=<fleet repository name> --name=<application name>
+
+# Refresh an application and upgrade it
+lizz refresh github --owner=<group>  --fleet=<fleet repository name> --name=<application name> --upgrade`,
 	RunE:  refreshGithubCmdRun,
 }
 

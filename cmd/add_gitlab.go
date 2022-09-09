@@ -34,9 +34,42 @@ import (
 
 var addGitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "",
-	Long:  ``,
-	RunE:  addGitlabCmdRun,
+	Short: "Add an application from and to GitLab",
+	Long: `The add gitlab command is used to add a Lizz compatible application to the cluster when the 
+repositories are stored in GitLab. It updates the fleet GitLab repository with the new application and 
+creates a new GitLab repository for the new application.`,
+	Example: `# Create a GitLab API token and export it as an env var
+export GITLAB_TOKEN=<my-token>
+
+# Add an application to a private repository using HTTPS token authentication
+lizz add gitlab \
+	--owner=<group> \
+	--fleet=<repository name of the fleet repository> \
+	--origin-url=<https gitlab repository url of the application> \
+	--path=<path to kustomization in application repository> \
+	--destination=<repository name of the application>
+
+# Add an application with the cluster-role (access to all namespaces)
+lizz add gitlab \
+	--owner=<group> \
+	--fleet=<fleet repository name> \
+	--origin-url=<application url> \
+	--path=<path> \
+	--destination=<application repository name> \
+	--cluster-role
+
+# Add an application with explicit values
+lizz add gitlab 
+	--owner=<group> \
+	--fleet=<fleet repository name> \
+	--origin-url=<application url> \
+	--path=<path> \
+	--destination=<application repository name> \
+ 	--set-value <key1=val1,key2=val2 values>
+
+
+# This command share many flags with the flux bootstrap gitlab command. See https://fluxcd.io/flux/cmd/flux_bootstrap_gitlab/ to have more example how to use the flags.`,
+	RunE: addGitlabCmdRun,
 }
 
 type addGitlabFlags struct {

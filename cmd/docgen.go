@@ -16,7 +16,9 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -25,8 +27,12 @@ import (
 
 const fmTemplate = `---
 title: "%s"
-importedDoc: true
+slug: /cli/%s
+description: ""
 ---
+
+# %s
+
 `
 
 var (
@@ -56,14 +62,13 @@ func docgenCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func frontmatterPrepender(filename string) string {
-	// 	name := filepath.Base(filename)
-	// 	base := strings.TrimSuffix(name, path.Ext(name))
-	// 	title := strings.Replace(base, "_", " ", -1)
-	// 	return fmt.Sprintf(fmTemplate, title)
-	return ""
+	name := filepath.Base(filename)
+	base := strings.TrimSuffix(name, path.Ext(name))
+	title := strings.Replace(base, "_", " ", -1)
+	return fmt.Sprintf(fmTemplate, title, base, title)
 }
 
 func linkHandler(name string) string {
 	base := strings.TrimSuffix(name, path.Ext(name))
-	return "../" + strings.ToLower(base) + "/"
+	return "/docs/cli/" + strings.ToLower(base) + "/"
 }

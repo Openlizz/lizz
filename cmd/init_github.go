@@ -27,9 +27,20 @@ import (
 
 var initGithubCmd = &cobra.Command{
 	Use:   "github",
-	Short: "",
-	Long:  ``,
-	RunE:  initGithubCmdRun,
+	Short: "Initialize the fleet repository in GitHub",
+	Long:  `The init command is used to initialize the cluster by creating the fleet repository in GitHub.`,
+	Example: `# Create a GitHub API token and export it as an env var
+export GITHUB_TOKEN=<my-token>
+
+# Initialize the fleet repository using HTTPS token authentication
+lizz init github --owner=<organization> --destination=fleet --origin-url=https://github.com/openlizz/fleet
+
+# Initialize the fleet repository using SSH authentication
+lizz init github --owner=<organization> --destination=fleet --origin-url=ssh://git@github.com/openlizz/fleet
+
+# Initialize the fleet repository to a public repository on a personal account
+lizz init github --owner=<user> --destination=fleet --origin-url=https://github.com/openlizz/fleet --private=false --personal=true`,
+	RunE: initGithubCmdRun,
 }
 
 type initGithubFlags struct {
