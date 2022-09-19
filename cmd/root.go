@@ -24,7 +24,7 @@ import (
 	"github.com/openlizz/lizz/internal/logger/cli"
 )
 
-var VERSION = "0.0.0-dev.0"
+var VERSION = "0.0.1"
 
 var rootCmd = &cobra.Command{
 	Use:           "lizz",
