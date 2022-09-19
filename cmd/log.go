@@ -22,8 +22,8 @@ import (
 
 	"sigs.k8s.io/kind/pkg/log"
 
-	"gitlab.com/openlizz/lizz/internal/logger/cli"
-	"gitlab.com/openlizz/lizz/internal/logger/env"
+	"github.com/openlizz/lizz/internal/logger/cli"
+	"github.com/openlizz/lizz/internal/logger/env"
 )
 
 // NewLogger returns the standard logger used by the kind CLI

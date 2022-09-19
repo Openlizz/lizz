@@ -20,9 +20,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/github"
-	"gitlab.com/openlizz/lizz/internal/provider"
-	"gitlab.com/openlizz/lizz/internal/repo"
+	"github.com/openlizz/lizz/internal/github"
+	"github.com/openlizz/lizz/internal/provider"
+	"github.com/openlizz/lizz/internal/repo"
 )
 
 var initGithubCmd = &cobra.Command{

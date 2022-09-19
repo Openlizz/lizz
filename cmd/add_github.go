@@ -22,10 +22,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/github"
-	"gitlab.com/openlizz/lizz/internal/provider"
-	"gitlab.com/openlizz/lizz/internal/repo"
-	"gitlab.com/openlizz/lizz/internal/yaml"
+	"github.com/openlizz/lizz/internal/github"
+	"github.com/openlizz/lizz/internal/provider"
+	"github.com/openlizz/lizz/internal/repo"
+	"github.com/openlizz/lizz/internal/yaml"
 )
 
 var addGithubCmd = &cobra.Command{

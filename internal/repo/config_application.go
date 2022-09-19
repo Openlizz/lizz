@@ -14,7 +14,7 @@ import (
 	"github.com/fluxcd/go-git-providers/gitprovider"
 	"github.com/fluxcd/pkg/apis/meta"
 	"github.com/sethvargo/go-password/password"
-	"gitlab.com/openlizz/lizz/internal/logger/cli"
+	"github.com/openlizz/lizz/internal/logger/cli"
 	yaml2 "gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/strvals"
 	"sigs.k8s.io/yaml"

@@ -27,7 +27,7 @@ import (
 
 	"sigs.k8s.io/kind/pkg/log"
 
-	"gitlab.com/openlizz/lizz/internal/logger/env"
+	"github.com/openlizz/lizz/internal/logger/env"
 )
 
 // Logger is the kind cli's log.Logger implementation

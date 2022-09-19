@@ -23,8 +23,8 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/repo"
-	"gitlab.com/openlizz/lizz/internal/yaml"
+	"github.com/openlizz/lizz/internal/repo"
+	"github.com/openlizz/lizz/internal/yaml"
 )
 
 var addGitCmd = &cobra.Command{

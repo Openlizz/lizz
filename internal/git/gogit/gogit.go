@@ -35,7 +35,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/client"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
-	"gitlab.com/openlizz/lizz/internal/git"
+	"github.com/openlizz/lizz/internal/git"
 )
 
 type GoGit struct {

@@ -26,10 +26,10 @@ import (
 
 	"github.com/fluxcd/go-git-providers/gitprovider"
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/gitlab"
-	"gitlab.com/openlizz/lizz/internal/provider"
-	"gitlab.com/openlizz/lizz/internal/repo"
-	"gitlab.com/openlizz/lizz/internal/yaml"
+	"github.com/openlizz/lizz/internal/gitlab"
+	"github.com/openlizz/lizz/internal/provider"
+	"github.com/openlizz/lizz/internal/repo"
+	"github.com/openlizz/lizz/internal/yaml"
 )
 
 var addGitlabCmd = &cobra.Command{

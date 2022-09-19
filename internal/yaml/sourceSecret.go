@@ -6,7 +6,7 @@ import (
 	"net/url"
 
 	"github.com/fluxcd/flux2/pkg/manifestgen/sourcesecret"
-	"gitlab.com/openlizz/lizz/internal/flags"
+	"github.com/openlizz/lizz/internal/flags"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )

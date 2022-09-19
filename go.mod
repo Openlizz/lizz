@@ -1,4 +1,4 @@
-module gitlab.com/openlizz/lizz
+module github.com/openlizz/lizz
 
 go 1.19
 
@@ -16,6 +16,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-wordwrap v1.0.1
+	github.com/otiai10/copy v1.7.0
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/sethvargo/go-password v0.2.0
 	github.com/spf13/cobra v1.5.0
@@ -126,7 +127,6 @@ require (
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
-	github.com/otiai10/copy v1.7.0 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

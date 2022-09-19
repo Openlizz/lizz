@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/openlizz/lizz/internal/git/gogit"
-	"gitlab.com/openlizz/lizz/internal/logger/cli"
-	"gitlab.com/openlizz/lizz/internal/yaml"
+	"github.com/openlizz/lizz/internal/git/gogit"
+	"github.com/openlizz/lizz/internal/logger/cli"
+	"github.com/openlizz/lizz/internal/yaml"
 	yml "sigs.k8s.io/yaml"
 )
 

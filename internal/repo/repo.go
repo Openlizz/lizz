@@ -16,10 +16,10 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
-	"gitlab.com/openlizz/lizz/internal/git"
-	"gitlab.com/openlizz/lizz/internal/git/gogit"
-	"gitlab.com/openlizz/lizz/internal/logger/cli"
-	"gitlab.com/openlizz/lizz/internal/provider"
+	"github.com/openlizz/lizz/internal/git"
+	"github.com/openlizz/lizz/internal/git/gogit"
+	"github.com/openlizz/lizz/internal/logger/cli"
+	"github.com/openlizz/lizz/internal/provider"
 )
 
 var (

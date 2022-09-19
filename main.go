@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "gitlab.com/openlizz/lizz/cmd"
+import "github.com/openlizz/lizz/cmd"
 
 func main() {
 	cmd.Execute()

@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/flags"
+	"github.com/openlizz/lizz/internal/flags"
 )
 
 var addCmd = &cobra.Command{

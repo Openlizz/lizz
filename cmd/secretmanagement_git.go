@@ -18,7 +18,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"gitlab.com/openlizz/lizz/internal/repo"
+	"github.com/openlizz/lizz/internal/repo"
 )
 
 var secretManagementGitCmd = &cobra.Command{

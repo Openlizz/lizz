@@ -13,9 +13,9 @@ import (
 
 	cp "github.com/otiai10/copy"
 	ignore "github.com/sabhiram/go-gitignore"
-	"gitlab.com/openlizz/lizz/internal/git/gogit"
-	"gitlab.com/openlizz/lizz/internal/logger/cli"
-	"gitlab.com/openlizz/lizz/internal/yaml"
+	"github.com/openlizz/lizz/internal/git/gogit"
+	"github.com/openlizz/lizz/internal/logger/cli"
+	"github.com/openlizz/lizz/internal/yaml"
 	"go.mozilla.org/sops/cmd/sops/codes"
 	"go.mozilla.org/sops/v3/cmd/sops/common"
 	yaml2 "gopkg.in/yaml.v2"

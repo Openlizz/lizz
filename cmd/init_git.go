@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/repo"
+	"github.com/openlizz/lizz/internal/repo"
 )
 
 var initGitCmd = &cobra.Command{

@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/openlizz/lizz/internal/logger/cli"
+	"github.com/openlizz/lizz/internal/logger/cli"
 )
 
 var VERSION = "0.0.0-dev.0"
