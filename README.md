@@ -282,7 +282,7 @@ homer-6f7b7647d6-fbckg   1/1     Running   0          11m
 You can access the homepage by running `kubectl -n homer port-forward svc/homer 8080:8080` and accessing [localhost:8080](http://localhost:8080/).
 You should see something similar to:
 
-![Homer application screenshot](./assets/homer_screenshot_dark.png#gh-dark-mode-onl)
+![Homer application screenshot](./assets/homer_screenshot_dark.png#gh-dark-mode-only)
 ![Homer application screenshot](./assets/homer_screenshot_light.png#gh-light-mode-only)
 
 ### Conclusion
