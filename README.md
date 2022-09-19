@@ -1,25 +1,25 @@
 <p align="center">
-    <img src="./assets/openlizz.png" alt="Logo of Openlizz"/>
+    <img src="./assets/openlizz.png" alt="Logo of Openlizz" width="250" />
 </p>
 
 <h1 align="center">Lizz</h1>
 
-<p align="center"><b>Lizz</b> is a CLI to facilitate the creation of a [Flux2](https://fluxcd.io/) managed k8s cluster and the deployment of applications.</p>
+<p align="center"><b>Lizz</b> is a CLI to facilitate the creation of a <a href="https://fluxcd.io/">Flux2</a> managed k8s cluster and the deployment of applications.</p>
 
 
 ## Concepts
 
 Lizz automatically configures the application according to the cluster in which it will be added.
 
-![Illustration of Lizz templating](./assets/illustrations/templating.svg)
+![Illustration of Lizz templating](./assets/illustrations/templating.png)
 
 Lizz creates and manages the Git repositories following the multi-tenant GitOps structure.
 
-![Illustration of Lizz repositories](./assets/illustrations/repositories.svg)
+![Illustration of Lizz repositories](./assets/illustrations/repositories.png)
 
 Lizz doesn’t interact with the Kubernetes cluster directly, the manifest files in the Git repositories are deployed in the cluster using [Flux2](https://fluxcd.io/) as GitOps tool.
 
-![Illustration of Lizz interactions with Flux](./assets/illustrations/flux.svg)
+![Illustration of Lizz interactions with Flux](./assets/illustrations/flux.png)
 
 ## Installation
 
