@@ -11,11 +11,11 @@ import (
 	"text/template"
 	"time"
 
-	cp "github.com/otiai10/copy"
-	ignore "github.com/sabhiram/go-gitignore"
 	"github.com/openlizz/lizz/internal/git/gogit"
 	"github.com/openlizz/lizz/internal/logger/cli"
 	"github.com/openlizz/lizz/internal/yaml"
+	cp "github.com/otiai10/copy"
+	ignore "github.com/sabhiram/go-gitignore"
 	"go.mozilla.org/sops/cmd/sops/codes"
 	"go.mozilla.org/sops/v3/cmd/sops/common"
 	yaml2 "gopkg.in/yaml.v2"
@@ -158,7 +158,7 @@ func (r *ApplicationRepo) Render(destinationRepo Repository, username, pwd strin
 		if err != nil {
 			return err
 		}
-		if info.IsDir() == false && strings.Index(path, ".git") == -1 {
+		if info.IsDir() == false && strings.Index(path, ".git") == -1 && strings.Index(path, "assets") == -1 {
 			blackListed := false
 			object := ignore.CompileIgnoreLines(append(r.config.TemplatingBlackList, configFilename)...)
 			blackListed = object.MatchesPath(strings.Replace(path, r.git.Path()+"/", "", -1))
