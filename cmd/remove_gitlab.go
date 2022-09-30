@@ -20,17 +20,19 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/openlizz/lizz/internal/gitlab"
 	"github.com/openlizz/lizz/internal/provider"
 	"github.com/openlizz/lizz/internal/repo"
+	"github.com/spf13/cobra"
 )
 
 var removeGitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "",
-	Long:  ``,
-	RunE:  removeGitlabCmdRun,
+	Short: "Remove an application from GitLab",
+	Long:  `The remove command is used to remove an application already added to the GitLab cluster. The remove command does not delete the application repository.`,
+	Example: `# Remove an application from the cluster
+lizz remove gitlab --owner=<group>  --fleet=<fleet repository name> --name=<application name>`,
+	RunE: removeGitlabCmdRun,
 }
 
 type removeGitlabFlags struct {

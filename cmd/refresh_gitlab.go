@@ -29,8 +29,15 @@ import (
 
 var refreshGitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "",
-	Long:  ``,
+	Short: "Refresh an application from GitLab",
+	Long:  `The refresh command is used to refresh an application already added to the GitLab cluster. It refreshs the
+application configuration with the current cluster state. It can also update the application by using the latest
+changes of the application origin GitLab repository.`,
+	Example: `# Refresh an application to update its configuration regarding the current cluster state
+lizz refresh gitlab --owner=<group>  --fleet=<fleet repository name> --name=<application name>
+
+# Refresh an application and upgrade it
+lizz refresh gitlab --owner=<group>  --fleet=<fleet repository name> --name=<application name> --upgrade`,
 	RunE:  refreshGitlabCmdRun,
 }
 

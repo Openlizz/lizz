@@ -16,17 +16,19 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/openlizz/lizz/internal/github"
 	"github.com/openlizz/lizz/internal/provider"
 	"github.com/openlizz/lizz/internal/repo"
+	"github.com/spf13/cobra"
 )
 
 var removeGithubCmd = &cobra.Command{
 	Use:   "github",
-	Short: "",
-	Long:  ``,
-	RunE:  removeGithubCmdRun,
+	Short: "Remove an application from GitHub",
+	Long:  `The remove command is used to remove an application already added to the GitHub cluster. The remove command does not delete the application repository.`,
+	Example: `# Remove an application from the cluster
+lizz remove github --owner=<group>  --fleet=<fleet repository name> --name=<application name>`,
+	RunE: removeGithubCmdRun,
 }
 
 type removeGithubFlags struct {

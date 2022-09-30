@@ -25,8 +25,10 @@ import (
 
 var refreshGitCmd = &cobra.Command{
 	Use:   "git",
-	Short: "",
-	Long:  ``,
+	Short: "Refresh an application from any Git server",
+	Long:  `The refresh command is used to refresh an application already added to the Git cluster. It refreshs the
+application configuration with the current cluster state. It can also update the application by using the latest
+changes of the application origin Git repository.`,
 	RunE:  refreshGitCmdRun,
 }
 

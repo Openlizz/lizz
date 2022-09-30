@@ -29,9 +29,20 @@ import (
 
 var initGitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "",
-	Long:  ``,
-	RunE:  initGitlabCmdRun,
+	Short: "Initialize the fleet repository in GitLab",
+	Long:  `The init command is used to initialize the cluster by creating the fleet repository in GitLab.`,
+	Example: `# Create a GitLab API token and export it as an env var
+export GITLAB_TOKEN=<my-token>
+
+# Initialize the fleet repository using HTTPS token authentication
+lizz init gitlab --owner=<group> --destination=fleet --origin-url=https://gitlab.com/openlizz/fleet
+
+# Initialize the fleet repository using SSH authentication
+lizz init gitlab --owner=<group> --destination=fleet --origin-url=ssh://git@gitlab.com/openlizz/fleet
+
+# Initialize the fleet repository to a public repository on a personal account
+lizz init gitlab --owner=<user> --destination=fleet --origin-url=https://gitlab.com/openlizz/fleet --private=false --personal=true`,
+	RunE: initGitlabCmdRun,
 }
 
 type initGitlabFlags struct {

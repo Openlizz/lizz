@@ -29,9 +29,12 @@ import (
 
 var secretManagementGitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "",
-	Long:  ``,
-	RunE:  secretManagementGitlabCmdRun,
+	Short: "Configure secret management for GitLab",
+	Long:  `The secret-management command is used to configure Kubernetes secrets management with Mozilla SOPS. It generates a age key, store the public key in the GitLab fleet repository, and store the private key in a yaml file to apply it.`,
+	Example: `# Configure secret management
+lizz secret-management gitlab --owner=<group>  --fleet=<fleet repository name>
+kubectl apply -f secret.yaml`,
+	RunE: secretManagementGitlabCmdRun,
 }
 
 type secretManagementGitlabFlags struct {

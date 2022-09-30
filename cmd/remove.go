@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,8 +21,8 @@ import (
 
 var removeCmd = &cobra.Command{
 	Use:   "remove",
-	Short: "",
-	Long:  ``,
+	Short: "Remove an application",
+	Long:  `The remove command is used to remove an application added to the cluster.`,
 }
 
 type removeFlags struct {
