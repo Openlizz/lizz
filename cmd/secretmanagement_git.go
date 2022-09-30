@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,8 +23,8 @@ import (
 
 var secretManagementGitCmd = &cobra.Command{
 	Use:   "git",
-	Short: "",
-	Long:  ``,
+	Short: "Configure secret management for any Git server",
+	Long:  `The secret-management command is used to configure Kubernetes secrets management with Mozilla SOPS. It generates a age key, store the public key in the fleet repository, and store the private key in a yaml file to apply it.`,
 	RunE:  secretManagementGitCmdRun,
 }
 
